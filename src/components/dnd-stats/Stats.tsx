@@ -31,7 +31,7 @@ const Stats = (): ReactElement => {
   const evaluateStatsBalance = (totalVal: number):string => {
     
     return (
-      totalVal < 65
+      totalVal < 70
     ? "Too Low"
     : totalVal > 80
     ? "Too High"
