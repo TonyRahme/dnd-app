@@ -1,22 +1,21 @@
-import React, { useState } from "react";
-import Stat from "./Stat";
+import React, { ReactElement, useState } from "react";
+import Stat from './Stat';
+import { StatProp, stats } from "./stats.config";
 
-const stats = ["STR", "DEX", "CON", "INT", "WIS", "CHA"];
-
-function Stats() {
+const Stats = (): ReactElement => {
   let statPoints = 0;
-  let statBlocks = [];
-  let multiRollArray = [];
+  let statBlocks: StatProp[] = [];
+  let multiRollArray: string[] = [];
   let statsPointBalance = "";
   
-  function createStat(stat) {
-    let multiRoll = [];
+  function createStat(stat: string) {
+    let multiRoll:number[] = [];
     multiRoll = Array.from(
       { length: 4 },
       () => Math.floor(Math.random() * 6) + 1
       );
       const multiRollResult = multiRoll.toLocaleString();
-      multiRollArray += multiRollResult;
+      multiRollArray.push(multiRollResult);
       multiRoll.sort().shift();
       const reducedMultiRoll = multiRoll.reduce((prev, cur) => prev + cur);
       incTotalStatPoints(reducedMultiRoll);
@@ -27,12 +26,12 @@ function Stats() {
       }
   }
   
-  function incTotalStatPoints(points) {
+  function incTotalStatPoints(points: number) {
     statPoints += points;
   }
 
   function createStatBlocks() {
-    statBlocks = stats.map((stat) => {
+    statBlocks = Object.values(stats).map((stat) => {
       return createStat(stat);
     })
   }
