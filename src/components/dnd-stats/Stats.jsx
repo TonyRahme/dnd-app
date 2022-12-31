@@ -6,8 +6,9 @@ const stats = ["STR", "DEX", "CON", "INT", "WIS", "CHA"];
 function Stats() {
   let statPoints = 0;
   let statBlocks = [];
+  let multiRollArray = [];
   let statsPointBalance = "";
-
+  
   function createStat(stat) {
     let multiRoll = [];
     multiRoll = Array.from(
@@ -15,42 +16,65 @@ function Stats() {
       () => Math.floor(Math.random() * 6) + 1
       );
       const multiRollResult = multiRoll.toLocaleString();
+      multiRollArray += multiRollResult;
       multiRoll.sort().shift();
       const reducedMultiRoll = multiRoll.reduce((prev, cur) => prev + cur);
       incTotalStatPoints(reducedMultiRoll);
-      return (
-        <Stat 
-        key={stat}
-        stat={stat}
-        rawScore = {reducedMultiRoll}
-        multiRollArray = {multiRollResult}
-        />
-    );
+      return {
+        stat: stat,
+        rawScore: reducedMultiRoll,
+        multiRollArray: multiRollResult,
+      }
   }
   
   function incTotalStatPoints(points) {
     statPoints += points;
   }
-  
-  statBlocks = stats.map((stat) => {
-    return createStat(stat);
-  })
-  
-  function refresh() {
-    setLoad(!isLoaded);
+
+  function createStatBlocks() {
+    statBlocks = stats.map((stat) => {
+      return createStat(stat);
+    })
   }
   
-  statsPointBalance =
-  statPoints < 65
-  ? "Too Low"
-  : statPoints > 80
-  ? "Too High"
-  : "Balanced";
-
-  const [isLoaded, setLoad] = useState(true);
+  function evaluateStatsBalance() {
+    statsPointBalance =
+    statPoints < 65
+    ? "Too Low"
+    : statPoints > 80
+    ? "Too High"
+    : "Balanced";
+  }
+  
+  function refresh() {
+    init();
+    setStatBlockArray(statBlocks);
+    
+  }
+  
+  function init() {
+    createStatBlocks();
+    evaluateStatsBalance();
+  }
+  
+  init();
+  const [statBlockArray, setStatBlockArray] = useState(statBlocks);
+  
   return (
     <div>
-      <ul>{statBlocks}</ul>
+      <ul>
+        {statBlockArray.map(statBlock => {
+          const {stat, rawScore, multiRollArray} = statBlock;
+          return (
+            <Stat 
+            key={stat}
+            stat={stat}
+            rawScore = {rawScore}
+            multiRollArray = {multiRollArray}
+            />
+          );
+        })}
+      </ul>
       <p>
         Total: {statPoints} <span>{statsPointBalance}</span>
       </p>
