@@ -5,14 +5,12 @@ import { StatProp, stats } from "./stats.config";
 const Stats = (): ReactElement => {
   
   const createStat = (stat: string): StatProp => {
-    let multiRollArray: string[] = [];
     let multiRoll:number[] = [];
     multiRoll = Array.from(
       { length: 4 },
       () => Math.floor(Math.random() * 6) + 1
       );
       const multiRollResult = multiRoll.toLocaleString();
-      multiRollArray.push(multiRollResult);
       multiRoll.sort().shift();
       const reducedMultiRoll = multiRoll.reduce((prev, cur) => prev + cur);
       return {
