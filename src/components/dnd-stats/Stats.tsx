@@ -1,14 +1,11 @@
-import React, { ReactElement, useState } from "react";
+import React, { ReactElement, useState, useEffect } from "react";
 import Stat from './Stat';
 import { StatProp, stats } from "./stats.config";
 
 const Stats = (): ReactElement => {
-  let statPoints = 0;
-  let statBlocks: StatProp[] = [];
-  let multiRollArray: string[] = [];
-  let statsPointBalance = "";
   
-  function createStat(stat: string) {
+  const createStat = (stat: string): StatProp => {
+    let multiRollArray: string[] = [];
     let multiRoll:number[] = [];
     multiRoll = Array.from(
       { length: 4 },
@@ -18,47 +15,46 @@ const Stats = (): ReactElement => {
       multiRollArray.push(multiRollResult);
       multiRoll.sort().shift();
       const reducedMultiRoll = multiRoll.reduce((prev, cur) => prev + cur);
-      incTotalStatPoints(reducedMultiRoll);
       return {
         stat: stat,
         rawScore: reducedMultiRoll,
         multiRollArray: multiRollResult,
       }
   }
-  
-  function incTotalStatPoints(points: number) {
-    statPoints += points;
-  }
 
-  function createStatBlocks() {
-    statBlocks = Object.values(stats).map((stat) => {
+  const createStatBlocks = ():StatProp[] => {
+    return Object.values(stats).map((stat) => {
       return createStat(stat);
     })
   }
   
-  function evaluateStatsBalance() {
-    statsPointBalance =
-    statPoints < 65
-    ? "Too Low"
-    : statPoints > 80
-    ? "Too High"
-    : "Balanced";
-  }
-  
-  function refresh() {
-    init();
-    setStatBlockArray(statBlocks);
+  const evaluateStatsBalance = (totalVal: number):string => {
     
+    return (
+      totalVal < 65
+    ? "Too Low"
+    : totalVal > 80
+    ? "Too High"
+    : "Balanced"
+    );
   }
   
-  function init() {
-    createStatBlocks();
-    evaluateStatsBalance();
+  const refresh = () => {
+    const statBlocks: StatProp[] = createStatBlocks();
+    setStatBlockArray(statBlocks);
   }
-  
-  init();
+  const statBlocks: StatProp[] = [];
   const [statBlockArray, setStatBlockArray] = useState(statBlocks);
   
+  useEffect(() => {
+    refresh();
+  },
+  []
+  );
+  
+  const statPoints = statBlockArray.reduce((acc, cur) => acc + cur.rawScore, 0);
+  const statsPointBalance = evaluateStatsBalance(statPoints);
+
   return (
     <div>
       <ul>
