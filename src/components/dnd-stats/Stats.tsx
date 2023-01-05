@@ -29,7 +29,9 @@ const Stats = (): ReactElement => {
   const evaluateStatsBalance = (totalVal: number):string => {
     
     return (
-      totalVal < 70
+    totalVal === 69
+    ? "Nice"
+    :  totalVal < 70
     ? "Too Low"
     : totalVal > 80
     ? "Too High"
@@ -71,7 +73,7 @@ const Stats = (): ReactElement => {
       <p>
         Total: {statPoints} <span>{statsPointBalance}</span>
       </p>
-      <button onClick={refresh}>Refresh</button>
+      <button type="button" className="btn btn-primary" onClick={refresh}>Refresh</button>
     </div>
   );
 }
