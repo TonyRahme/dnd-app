@@ -6,7 +6,7 @@ const title = "DnD";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <div className="stats-container">
+  <div className="stats-area">
     <h1 className="heading">{title}</h1>
     <Stats />
   </div>,

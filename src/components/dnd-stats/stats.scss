@@ -1,3 +1,39 @@
-li::marker {
-    content: none;
+@use "../../custom.scss";
+
+//stats
+.stats-container {
+    display: grid;
+    grid-template-rows: auto;
+}
+
+//single stat
+
+.stat-row {
+    display: grid;
+    grid-template-areas: 
+    "stat-name stat-raw-value stat-arrow stat-multiroll";
+    grid-template-columns: 36px 24px 12px 48px;
+    column-gap: 4px;
+    justify-items: center;
+
+    &-name {
+        grid-area: stat-name;
+        font-family: custom.$Montserrat;
+        font-weight: 900;
+    }
+    &-value {
+        grid-area: stat-raw-value;
+        font-family: custom.$Sacramento, 'sans';
+        font-weight: 600;
+    }
+    &-arrow {
+        grid-area: stat-arrow;
+        font-family: custom.$Sacramento, 'sans';
+        font-weight: 600;
+    }
+    &-multiroll {
+        grid-area: stat-multiroll;
+        font-family: custom.$Sacramento, 'sans';
+        font-weight: 600;
+    }
 }

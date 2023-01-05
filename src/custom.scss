@@ -1,6 +1,16 @@
 @import '~bootstrap/scss/bootstrap.scss';
+$Montserrat: 'Montserrat';
+$Righteous: 'Righteous';
+$Sacramento: 'Sacramento';
+$Ubuntu: 'Ubuntu';
 
-
-.stats-container {
+.stats-area {
     padding: 5% 3%;
+    width: 25%;
+    border: 1px black dotted;
+}
+
+.heading {
+    font-family: $Righteous, fantasy;
+    text-align: center;
 }

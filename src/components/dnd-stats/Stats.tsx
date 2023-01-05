@@ -1,6 +1,7 @@
 import React, { ReactElement, useState, useEffect } from "react";
 import Stat from './Stat';
 import { StatProp, stats } from "./stats.config";
+import './stats.scss';
 
 const Stats = (): ReactElement => {
   
@@ -57,7 +58,7 @@ const Stats = (): ReactElement => {
 
   return (
     <div>
-      <ul>
+      <div className="stats-container">
         {statBlockArray.map(statBlock => {
           const {stat, rawScore, multiRollArray} = statBlock;
           return (
@@ -69,7 +70,7 @@ const Stats = (): ReactElement => {
             />
           );
         })}
-      </ul>
+      </div>
       <p>
         Total: {statPoints} <span>{statsPointBalance}</span>
       </p>

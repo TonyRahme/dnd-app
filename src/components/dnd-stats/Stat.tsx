@@ -4,9 +4,12 @@ import './stats.scss';
 
 const Stat = (props: StatProp):ReactElement => {
   return(
-    <li key={props.stat}>
-      {props.stat}: {props.rawScore} =&gt; {props.multiRollArray}
-    </li>
+    <div className="stat-row" key={props.stat}>
+      <span className="stat-row-name">{props.stat}</span>
+      <span className="stat-row-value">{props.rawScore}</span>
+      <span className="stat-row-arrow">=&gt;</span>
+      <span className="stat-row-multiroll">{props.multiRollArray}</span>
+    </div>
   );
 }
 
