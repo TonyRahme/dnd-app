@@ -4,10 +4,12 @@ $Righteous: 'Righteous';
 $Sacramento: 'Sacramento';
 $Ubuntu: 'Ubuntu';
 
-.stats-area {
-    padding: 5% 3%;
-    width: 25%;
-    border: 1px black dotted;
+.tabs {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    justify-content: flex-start;
 }
 
 .heading {
