@@ -10,16 +10,16 @@ export const startingAreaRegex = /([CDPS][corst]?[ln]?\d{2}w?(x\d{2})*)|(s?[A-Z]
 
 export enum RegexDungeonRules {
     //Dungeon Entity
-   C = "Chamber",
-   P = "Passage",
-   D = "Door",
-   S = "Stairs",
+   C_Chamber = "C",
+   P_Passage = "P",
+   D_Door = "D",
+   S_Stairs = "S",
    //Chamber Shapes
-   s = "Square",
-   c = "Circle",
-   r = "Rectangle",
-   o = "Octagon",
-   t = "Trapezoid",
+   s_Square = "s",
+   c_Circle = "c",
+   r_Rectangle = "r",
+   o_Octagon = "o",
+   t_Trapezoid = "t",
    //
 }
 

@@ -1,5 +1,5 @@
 import { RegexDungeonRules } from "./dungeon-graph.config";
-import { Chamber, RoomShape, Dimension, DungeonEntity, ExitType, StairType, Passage } from "./random-dungeon-gen.model";
+import { Chamber, RoomShape, Dimension, DungeonEntity, ExitType, StairType, Passage, EntityModelRequest } from "./random-dungeon-gen.model";
 
 
 const chamberRegex = /C[corst]?[nl]?\d{2}(x\d{2})*/g;
@@ -7,31 +7,42 @@ const EntitySplitRegex = /[CDPS][corst]?[ln]?|\d{2}w?(x\d{2})*/g
 
 export const dungeonGenerateGraph = (data: string[]) => {
 
-
-    const startingArea = generateStartingArea(data);
+    const startingAreaData = getStartingAreaReq(data);
+    const startingArea = generateStartingArea(startingAreaData);
     console.log(startingArea);
     
 }
 
-const generateStartingArea = (data:string[]):DungeonEntity => {
+const getStartingAreaReq = (data: string[]): EntityModelRequest => {
+    
     let entityTypeDataShift = data.shift();
     let exits = data;
     const entityType = entityTypeDataShift?.length ? entityTypeDataShift : "";
     
-
+    
     let match = entityType.match(EntitySplitRegex);
     let entity: string[] = match !== null ? Array.from<string>(match) : [];
     let [entityDesc, dimension] = entity;
     let [entityCode] = entityDesc;
+
+    return {
+        entityCode: entityCode,
+        entityDesc: entityDesc,
+        dimension: dimension,
+        exits: exits
+    }
+};
+
+const generateStartingArea = (entityModel:EntityModelRequest):DungeonEntity => {
     
     let start: DungeonEntity;
 
-    switch(entityCode) {
-        case 'C':
-            start = buildStartChamber(entityDesc, dimension, exits);
+    switch(entityModel.entityCode) {
+        case RegexDungeonRules.C_Chamber:
+            start = buildStartChamber(entityModel);
             break;
-        case 'P':
-            start = buildStartPassage(dimension, exits);
+        case RegexDungeonRules.P_Passage:
+            start = buildStartPassage(entityModel);
             break;
         default:
             start = {description: "error"};
@@ -42,11 +53,11 @@ const generateStartingArea = (data:string[]):DungeonEntity => {
     
 }
 
-const buildStartChamber = (entityDesc: string, dimension: string, exits?: string[]): Chamber => {
-    let [_, shape, size] = entityDesc;
-    let [length, width] = dimension.split('x');
+const buildStartChamber = (entityModel: EntityModelRequest): Chamber => {
+    let [_, shape, size] = entityModel.entityDesc;
+    let [length, width] = entityModel.dimension.split('x');
 
-    console.log(`entityCode: ${_}, shape:${shape}, size: ${size}, length:${length}, width: ${width}, exits: ${exits}`);
+    console.log(`entityCode: ${_}, shape:${shape}, size: ${size}, length:${length}, width: ${width}, exits: ${entityModel.exits}`);
     
 
     const startingAreaChamber: Chamber = {
@@ -57,15 +68,15 @@ const buildStartChamber = (entityDesc: string, dimension: string, exits?: string
         description: "",
     }
 
-    startingAreaChamber.exits = [{exitType: ExitType.Door, to: {dimension: {x:0,y:0,z:0,width:5,length:10,height:10}}}];
+    // startingAreaChamber.exits = [{exitType: ExitType.Door, to: {dimension: {x:0,y:0,z:0,width:5,length:10,height:10}}}];
     return startingAreaChamber;
     
 }
 
-const buildStartPassage = (dimension: string, exits?: string[]): Passage => {
-    let [width] = dimension.split('w');
+const buildStartPassage = (entityModel: EntityModelRequest): Passage => {
+    let [width] = entityModel.dimension.split('w');
 
-    console.log(`width: ${width}, exits: ${exits}`);
+    console.log(`width: ${width}, exits: ${entityModel.exits}`);
     
 
     const startingAreaPassage: Passage = {
@@ -78,15 +89,15 @@ const buildStartPassage = (dimension: string, exits?: string[]): Passage => {
 
 const genShape = (shape: string): RoomShape => {
     switch(shape) {
-        case 's':
+        case RegexDungeonRules.s_Square:
             return RoomShape.Square;
-        case 'c':
+        case RegexDungeonRules.c_Circle:
             return RoomShape.Circle;
-        case 'r':
+        case RegexDungeonRules.r_Rectangle:
             return RoomShape.Rectangle;
-        case 'o':
+        case RegexDungeonRules.o_Octagon:
             return RoomShape.Octagon;
-        case 't':
+        case RegexDungeonRules.t_Trapezoid:
             return RoomShape.Trapezoid;
         default:
             return RoomShape.None

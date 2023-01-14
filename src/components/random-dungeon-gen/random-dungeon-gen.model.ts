@@ -1,3 +1,11 @@
+
+export interface EntityModelRequest {
+    entityCode: string;
+    entityDesc: string;
+    dimension: string;
+    exits: string[];
+}
+
 export interface Chamber extends DungeonEntity {
     shape: RoomShape;
     dimension: Dimension;
