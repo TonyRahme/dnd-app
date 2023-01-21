@@ -1,48 +1,51 @@
 
-export interface EntityModelRequest {
+export interface RoomEntityModelRequest {
     entityCode: string;
     entityDesc: string;
     dimension: string;
     exits: string[];
 }
 
-export interface Chamber extends DungeonEntity {
-    shape: RoomShape;
-    dimension: Dimension;
-    exits: Exit[];
-    isLarge: boolean;
-}
 
-export enum RoomShape {
-    None = 0,
-    Circle,
-    Square,
-    Rectangle,
-    Octagon,
-    Trapezoid,
+export interface Chamber extends RoomEntity {
+    shape: RoomShapeType;
+    isLarge: boolean;
 }
 
 export interface Exit {
     exitType: ExitType;
-    exit?: Door | Passage | Stair;
-    to: Chamber | Passage;
+    exitId?: string;
+    toId?: string;
+    isSecret: boolean;
 }
 
-export interface Door extends DungeonEntity {
+export interface Door extends ExitEntity {
     doorType: DoorType;
     isLocked: boolean;
     isSecret: boolean;
     isFalse: boolean;
 }
 
-export interface Passage extends DungeonEntity {
-    dimension: Dimension;
-    exits?: (Chamber | Door | Passage | Stair)[]
-}
-
-export interface Stair extends DungeonEntity {
+export interface Stair extends ExitEntity {
     stairType: StairType;
     levels: number;
+}
+
+export interface Passage extends RoomEntity {
+}
+
+export interface PassageWay extends ExitEntity {
+    
+}
+
+
+export enum RoomShapeType {
+    None = 0,
+    Circle,
+    Square,
+    Rectangle,
+    Octagon,
+    Trapezoid,
 }
 
 export enum ExitType {
@@ -60,6 +63,7 @@ export enum StairType {
 export enum DoorType {
     Wooden = 1,
     Iron,
+    Stone,
     Portcullis,
     Secret,
     Other,
@@ -74,6 +78,16 @@ export interface Dimension {
     z: number;
 }
 
+export interface RoomEntity extends DungeonEntity {
+    exits: Exit[];
+    dimension: Dimension;
+}
+
+export interface ExitEntity extends DungeonEntity {
+    roomIds?: string[];
+}
+
 export interface DungeonEntity {
+    id: string;
     description?: string;
 }

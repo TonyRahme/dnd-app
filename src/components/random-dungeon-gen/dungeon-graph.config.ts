@@ -20,7 +20,11 @@ export enum RegexDungeonRules {
    r_Rectangle = "r",
    o_Octagon = "o",
    t_Trapezoid = "t",
-   //
+   l_LargeChamber = "l",
+   n_NormalChamber = "n",
+   //other
+   sD_SecretDoor = "sD",
+   T_Trap = "T",
 }
 
 //functions
@@ -133,17 +137,17 @@ export const randomDoorTypeWeights = {
     [RandomDoorType.SecretLocked]: 1,
 }
 
-export enum RandomBeyondDoor {
-    Passage = "Passage",
-    Chamber = "Chamber",
-    Stair = "Stair",
-    Trap = "Trap",
+export const RandomBeyondDoor = {
+    Passage: RegexDungeonRules.P_Passage,
+    Chamber: RegexDungeonRules.C_Chamber,
+    Stairs: RegexDungeonRules.S_Stairs,
+    Trap: RegexDungeonRules.T_Trap,
 }
 
 export const RandomBeyondDoorWeights = {
     [RandomBeyondDoor.Passage]: 8,
     [RandomBeyondDoor.Chamber]: 10,
-    [RandomBeyondDoor.Stair]: 1,
+    [RandomBeyondDoor.Stairs]: 1,
     [RandomBeyondDoor.Trap]: 1,
 }
 
@@ -153,18 +157,18 @@ export const RandomBeyondDoorOptions: WeightedOption[] = createWeightedOptionMap
 // Random Chamber Table
 
 export enum RandomChamber {
-    Square20 = "Cs20", //Normal
-    Square30 = "Cs30", //Normal
-    Square40 = "Cs40", //Normal
-    Rect20x30 = "Cr20x30", //Normal
-    Rect30x40 = "Cr30x40", //Normal
-    Rect40x50 = "Cr40x50", //Large
-    Rect50x80 = "Cr50x80", //Large
-    Circle30 = "Cc30", //Normal
-    Circle50 = "Cc50", //Large
-    Octagon40 = "Co40", //Large
-    Octagon60 = "Co60", //Large
-    Trapezoid40x60 = "Ct40x60", //Large
+    Square20 = "Csn20", //Normal
+    Square30 = "Csn30", //Normal
+    Square40 = "Csn40", //Normal
+    Rect20x30 = "Crn20x30", //Normal
+    Rect30x40 = "Crn30x40", //Normal
+    Rect40x50 = "Crl40x50", //Large
+    Rect50x80 = "Crl50x80", //Large
+    Circle30 = "Ccl30", //Normal
+    Circle50 = "Ccl50", //Large
+    Octagon40 = "Col40", //Large
+    Octagon60 = "Col60", //Large
+    Trapezoid40x60 = "Ctl40x60", //Large
 }
 
 export const randomChamberWeights = {
@@ -227,9 +231,9 @@ export const randomExitLocationWeights = {
     [RandomExitLocation.WallSameEntrance]: 3,
 }
 
-export enum RandomExitType {
-    Door = "Door",
-    Passage = "Passage",
+export const RandomExitType = {
+    Door: RegexDungeonRules.D_Door,
+    Passage: RegexDungeonRules.P_Passage,
 }
 
 export const randomChamberOptions: WeightedOption[] = createWeightedOptionMap(randomChamberWeights);
