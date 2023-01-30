@@ -14,7 +14,7 @@ export interface Chamber extends RoomEntity {
 
 export interface Exit {
     exitType: ExitType;
-    exitId?: string;
+    exitId: string;
     toId?: string;
     isSecret: boolean;
 }
@@ -23,7 +23,7 @@ export interface Door extends ExitEntity {
     doorType: DoorType;
     isLocked: boolean;
     isSecret: boolean;
-    isFalse: boolean;
+    isTrap: boolean;
 }
 
 export interface Stair extends ExitEntity {
@@ -79,12 +79,13 @@ export interface Dimension {
 }
 
 export interface RoomEntity extends DungeonEntity {
-    exits: Exit[];
+    exitsIds: string[];
     dimension: Dimension;
 }
 
 export interface ExitEntity extends DungeonEntity {
-    roomIds?: string[];
+    exitType: ExitType;
+    roomIds: string[];
 }
 
 export interface DungeonEntity {
