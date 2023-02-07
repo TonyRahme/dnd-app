@@ -175,6 +175,7 @@ const buildStartPassage = (entityModel: RoomEntityModelRequest): Passage => {
 }
 
 const buildRandomPassage = (roomId: string) => {
+    //TODO - complete function implementation
     const passageRegex = /([CFS](\d*)%?)|([PsD]*[LR]*)/g
     const randomPassage = weightedRandom(randomPassageOptions);
     const passageData = extractArrayFromRegexMatch(randomPassage, passageRegex);
@@ -251,6 +252,7 @@ const buildRandomExits = (roomId: string,exitCount: number): string[] => {
 
 const buildBeyondExit = (exitId: string) => {
     // const randomBeyondDoorRoomType: string = weightedRandom(RandomBeyondDoorOptions);
+    //TODO - refactor switch statement similar to generateStartingArea()
     const randomBeyondExit: string = RandomBeyondExit.Chamber;
 
     const exit = exitMap.get(exitId);
@@ -263,8 +265,7 @@ const buildBeyondExit = (exitId: string) => {
     switch(randomBeyondExit) {
         case RandomBeyondExit.Chamber:
             let newRandomChamber = buildRandomChamber(exitId);
-            const newChamberExits = newRandomChamber.exitsIds.filter((exit, idx) => idx !== 0);
-            exitQueue.push(...newChamberExits);
+            addToExitQueue(newRandomChamber.exitsIds);
             addDungeonArea(newRandomChamber);
             addRoomsToExit(newRandomChamber.id, exit.id);
             
@@ -274,9 +275,7 @@ const buildBeyondExit = (exitId: string) => {
             break;
         case RandomBeyondExit.Passage:
             let newRandomPassage = buildRandomPassage(roomId);
-            let newPassageExits = newRandomPassage.exitsIds;
-            newPassageExits.shift();
-            exitQueue.push(...newPassageExits);
+            addToExitQueue(newRandomPassage.exitsIds);
             addDungeonArea(newRandomPassage);
             beyondDoor = newRandomPassage as Passage;
             console.log("newly random Passage", beyondDoor);
@@ -492,6 +491,9 @@ const extractArrayFromRegexMatch = (entityType: string, regex: RegExp): string[]
     return match !== null ? Array.from<string>(match) : [];
 }
 
-const addToExitQueue = (exits: string[]) => {
-    exitQueue.push(...exits);
+const addToExitQueue = (exitIds: string[]) => {
+    const exitsExcludeFirst = exitIds.filter((_, idx) => idx > 0);
+    if(exitsExcludeFirst.length) {
+        exitQueue.push(...exitsExcludeFirst);
+    }
 }
