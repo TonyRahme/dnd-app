@@ -137,7 +137,7 @@ export const randomDoorTypeWeights = {
     [RandomDoorType.SecretLocked]: 1,
 }
 
-export const RandomBeyondDoor = {
+export const RandomBeyondExit = {
     Passage: RegexDungeonRules.P_Passage,
     Chamber: RegexDungeonRules.C_Chamber,
     Stairs: RegexDungeonRules.S_Stairs,
@@ -145,10 +145,10 @@ export const RandomBeyondDoor = {
 }
 
 export const RandomBeyondDoorWeights = {
-    [RandomBeyondDoor.Passage]: 8,
-    [RandomBeyondDoor.Chamber]: 10,
-    [RandomBeyondDoor.Stairs]: 1,
-    [RandomBeyondDoor.Trap]: 1,
+    [RandomBeyondExit.Passage]: 8,
+    [RandomBeyondExit.Chamber]: 10,
+    [RandomBeyondExit.Stairs]: 1,
+    [RandomBeyondExit.Trap]: 1,
 }
 
 export const randomDoorTypeOptions: WeightedOption[] = createWeightedOptionMap(randomDoorTypeWeights);
