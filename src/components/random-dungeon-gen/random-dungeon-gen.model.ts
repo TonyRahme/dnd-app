@@ -12,7 +12,7 @@ export interface Chamber extends RoomEntity {
     isLarge: boolean;
 }
 
-export interface Exit {
+export interface ExitDTO {
     exitType: ExitType;
     exitId: string;
     toId?: string;

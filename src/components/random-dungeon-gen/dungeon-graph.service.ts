@@ -1,5 +1,5 @@
 import { RandomBeyondDoor, RandomBeyondDoorOptions, randomChamberOptions, RandomDoorType, randomDoorTypeOptions, randomExitTypeOptions, randomLargeExitOptions, randomNormalExitOptions, randomPassageOptions, RandomStartingArea, RegexDungeonRules, startingAreaRegex, weightedRandom } from "./dungeon-graph.config";
-import { Chamber, RoomShapeType, Dimension, Passage, RoomEntityModelRequest, Exit, RoomEntity, ExitEntity, ExitType, Door, DoorType, PassageWay } from "./random-dungeon-gen.model";
+import { Chamber, RoomShapeType, Dimension, Passage, RoomEntityModelRequest, ExitDTO, RoomEntity, ExitEntity, ExitType, Door, DoorType, PassageWay } from "./random-dungeon-gen.model";
 
 const dungeonMap: Map<string, RoomEntity> = new Map();
 let exitCount: number = 0;
@@ -9,13 +9,12 @@ const chamberRegex = /C[corst]?[nl]?\d{2}(x\d{2})*/g;
 const EntitySplitRegex = /[CDPS][corst]?[ln]?|\d{2}w?(x\d{2})*/g
 
 export const dungeonGenerateGraph = (startingAreaCode: string) => {
-    startingAreaCode = RandomStartingArea.Square40Door3Walls;
+    startingAreaCode = RandomStartingArea.Passage10Wide4Intersection;
     const startingArea: RoomEntity = generateStartingArea(startingAreaCode);
     startingArea.exitsIds.forEach(exitId => {
         buildBeyondExit(exitId);
     });
 
-    // addExitsToDungeonArea(startingExits, startingArea.id);
     console.log(startingArea);
     console.log("dungeonMap", dungeonMap);
     console.log("exitMap", exitMap);
@@ -92,7 +91,7 @@ const generateStartingExits = (dungeonId: string, startingExits: string[]): stri
     return exits;
 }
 
-const buildStartingExitEntities = (roomId: string, exits: Exit[]) => {
+const buildStartingExitEntities = (roomId: string, exits: ExitDTO[]) => {
     exits.forEach(exit => {
         switch(exit.exitType) {
             case ExitType.Passage:
@@ -108,7 +107,7 @@ const buildStartingExitEntities = (roomId: string, exits: Exit[]) => {
     })
 }
 
-const buildRandomExitEntities = (roomId: string, exits: Exit[]) => {
+const buildRandomExitEntities = (roomId: string, exits: ExitDTO[]) => {
     exits.forEach(exit => {
         switch(exit.exitType) {
             case ExitType.Passage:
@@ -127,67 +126,42 @@ const buildRandomExitEntities = (roomId: string, exits: Exit[]) => {
 const buildStartChamber = (entityModel: RoomEntityModelRequest): Chamber => {
     let [_, shape, size] = entityModel.entityDesc;
     let [length, width] = entityModel.dimension.split('x');
+    const newId = generateDungeonId(entityModel.entityCode);
     const shapeValue = genShape(shape);
+    const newDim = genDimension(Number(length), Number(width));
     const isLargeSize = size === RegexDungeonRules.l_LargeChamber;
-
-    const startingAreaChamber: Chamber = {
-        id: generateDungeonId(entityModel.entityCode),
-        shape: shapeValue,
-        isLarge: isLargeSize,
-        dimension: genDimension(Number(length), Number(width)),
-        exitsIds: [],
-        description: `Chamber, shape:${RoomShapeType[shapeValue]},`+ 
-        `size: ${isLargeSize ? RegexDungeonRules.l_LargeChamber : RegexDungeonRules.n_NormalChamber},` + 
-        `dimension: ${entityModel.dimension}, exits: ${entityModel.exits}`,
-    }
-
-    return startingAreaChamber;
     
+    return genChamber(newId, newDim, shapeValue, isLargeSize);
 }
 
 const buildRandomChamber = (roomId: string): Chamber => {
     const randomChamber = weightedRandom(randomChamberOptions);
-    const exitIds:string[] = dungeonMap.get(roomId)?.exitsIds || [];
+    const roomExitIds:string[] = dungeonMap.get(roomId)?.exitsIds || [];
     
-
     let entity: string[] = extractArrayFromRegexMatch(randomChamber, EntitySplitRegex);
     const entityModel = buildEntityModelReq(entity);
     let [_, shape, size] = entityModel.entityDesc;
     let [length, width] = entityModel.dimension.split('x');
-
+    
     const shapeValue = genShape(shape);
     const isLargeSize: boolean = size === RegexDungeonRules.l_LargeChamber;
     const exitCount: number = isLargeSize ? 
         Number(weightedRandom(randomLargeExitOptions)) :
         Number(weightedRandom(randomNormalExitOptions));
-
-        let newId = generateDungeonId(entityModel.entityCode);
-    const chamber: Chamber = {
-        id: newId,
-        shape: shapeValue,
-        isLarge: isLargeSize,
-        dimension: genDimension(Number(length), Number(width)),
-        exitsIds: [exitIds.at(0) || "", ...buildRandomExits(newId, exitCount)],
-        description: `Chamber, shape:${RoomShapeType[shapeValue]},`+ 
-        `size: ${isLargeSize ? RegexDungeonRules.l_LargeChamber : RegexDungeonRules.n_NormalChamber},` + 
-        `dimension: ${entityModel.dimension}, exits: ${exitCount + 1}`,
-    }
-
-    return chamber;
+    
+    let newId = generateDungeonId(entityModel.entityCode);
+    let newDim = genDimension(Number(length), Number(width));
+    const newExitIds =  [roomExitIds.at(0) || "" , ...buildRandomExits(newId, exitCount)];
+    
+    return genChamber(newId, newDim, shapeValue, isLargeSize, newExitIds);
 }
 
 const buildStartPassage = (entityModel: RoomEntityModelRequest): Passage => {
     let [width] = entityModel.dimension.split('w');
+    const newDim: Dimension = genDimension(10, Number(width));
+    const newId: string = generateDungeonId(entityModel.entityCode);
 
-    console.log(`width: ${width}, exits: ${entityModel.exits}`);
-
-    const startingAreaPassage: Passage = {
-        id: generateDungeonId(entityModel.entityCode),
-        dimension: genDimension(10, Number(width)),
-        exitsIds: [],
-        description: `Passage, width: ${width}, exits: ${entityModel.exits}`,
-    } as RoomEntity;
-    return startingAreaPassage;
+    return genPassage(newId, newDim);
 }
 
 const buildRandomPassage = (roomId: string) => {
@@ -195,19 +169,16 @@ const buildRandomPassage = (roomId: string) => {
     const randomPassage = weightedRandom(randomPassageOptions);
     const passageData = extractArrayFromRegexMatch(randomPassage, passageRegex);
     const length = passageData.shift();
-    const exits = passageData;
+    const exits: string[] = [dungeonMap.get(roomId)?.exitsIds.at(0) || ""];
+    
     console.log(passageData);
     //TODO figure out passageData to be added to exitsIds
-
-    let newPassage: Passage = {
-        id: generateExitId(RegexDungeonRules.P_Passage),
-        exitsIds: [],
-        dimension: genDimension(Number(length ? length : 10), 10)
-    };
-
+    const newId = generateDungeonId(RegexDungeonRules.P_Passage);
+    const newDim = genDimension(Number(length), 10);
+    return genPassage(newId, newDim, exits);
 }
 
-const buildStartingPassageWay = (roomId: string, exit?: Exit) => {
+const buildStartingPassageWay = (roomId: string, exit?: ExitDTO) => {
     let id = exit?.exitId as string;
     let newPassage: PassageWay = genPassageWay(id, [roomId]);
     addExitPoint(newPassage);
@@ -218,11 +189,11 @@ const buildRandomStairs = (roomId: string) => {
 
 }
 
-const buildStartingStairs = (roomId: string, exit: Exit) => {
+const buildStartingStairs = (roomId: string, exit: ExitDTO) => {
 
 }
 
-const buildRandomDoor = (roomId: string, exit: Exit) => {
+const buildRandomDoor = (roomId: string, exit: ExitDTO) => {
     const randomDoorType:string = weightedRandom(randomDoorTypeOptions);
     const randomBeyondDoor: string = weightedRandom(RandomBeyondDoorOptions);
     let doorType: DoorType = DoorType.Other;
@@ -236,7 +207,7 @@ const buildRandomDoor = (roomId: string, exit: Exit) => {
     addExitPoint(newDoor);
 }
 
-const buildStartingDoor = (roomId: string, exit?: Exit) => {
+const buildStartingDoor = (roomId: string, exit?: ExitDTO) => {
 
     const randomDoorType:string = weightedRandom(randomDoorTypeOptions);
     const isSecret = exit?.isSecret !== undefined ? exit.isSecret : false;
@@ -248,7 +219,7 @@ const buildStartingDoor = (roomId: string, exit?: Exit) => {
 }
 
 const buildRandomExits = (roomId: string,exitCount: number): string[] => {
-    let exits: Exit[] = [];
+    let exits: ExitDTO[] = [];
 
     for(let i = 0; i < exitCount; i++) {
         let exitCode = weightedRandom(randomExitTypeOptions);
@@ -294,7 +265,10 @@ const buildBeyondDoor = (door: Door, randomBeyondDoor: string) => {
     
             break;
         case RandomBeyondDoor.Passage:
-            buildRandomPassage(roomId)
+            let newRandomPassage = buildRandomPassage(roomId);
+            addDungeonArea(newRandomPassage);
+            beyondDoor = newRandomPassage as Passage;
+            console.log("newly random Passage", beyondDoor);
             break;
         case RandomBeyondDoor.Stairs:
             break;
@@ -333,7 +307,7 @@ const extractDoorPropFromCode = (code: string): any[] => {
 
 const addNewExitsInStartingRoom = (roomId: string, exitCode: string, amount: number, isSecret = false): string[] => {
     
-    let newStartingExits: Exit[] = [];
+    let newStartingExits: ExitDTO[] = [];
     for(let i = 0; i < amount; i++) {
         newStartingExits.push(genExit(roomId, exitCode, isSecret))
     }
@@ -394,9 +368,9 @@ const genDimension = (length: number, width: number): Dimension => {
     }
 }
 
-const genExit = (roomId:string, exitCode: string, isSecret: boolean = false): Exit => {
+const genExit = (roomId:string, exitCode: string, isSecret: boolean = false): ExitDTO => {
     
-    const exit: Exit = {
+    const exit: ExitDTO = {
         exitType: getExitTypeByCode(exitCode),
         exitId: generateExitId(exitCode),
         isSecret: isSecret,
@@ -409,7 +383,7 @@ const genPassageWay = (newId: string, newRoomIds: string[]): PassageWay => {
         exitType: ExitType.Passage,
         id: newId,
         roomIds: newRoomIds,
-        description: `Passage between ${newRoomIds}`,
+        description: `PassageWay between ${newRoomIds}`,
     };
     return newPassageWay;
 }
@@ -426,6 +400,33 @@ const genDoor = (newId: string, newDoorType: DoorType, newRoomIds: string[], isL
         description: `Door Type: ${DoorType[newDoorType]},${isLocked?' locked,':''}${isTrap?' trapped,':''}${isSecret?' Secret':''}`
     }
     return newDoor;
+}
+
+
+const genChamber = (newId: string, newDimension: Dimension, newShape: RoomShapeType, isLarge: boolean ,newExitsIds: string[] = []): Chamber => {
+    let newChamber: Chamber = {
+        id: newId,
+        dimension: newDimension,
+        shape: newShape,
+        isLarge: isLarge,
+        exitsIds: newExitsIds,
+        description: `Chamber, shape:${RoomShapeType[newShape]},`+ 
+        `size: ${isLarge ? RegexDungeonRules.l_LargeChamber : RegexDungeonRules.n_NormalChamber},` + 
+        `dimension: ${newDimension}, exits: ${newExitsIds.length}`
+    }
+
+    return newChamber;
+}
+
+const genPassage = (newId: string, newDimension: Dimension, newExitsIds: string[] = []): Passage => {
+    let newPassage: Passage = {
+        id: newId,
+        dimension: newDimension,
+        exitsIds: newExitsIds,
+        description: `Passage, width: ${newDimension.width}, exits: ${newExitsIds}`,
+    } 
+
+    return newPassage;
 }
 
 const generateDungeonId = (entityCode: string): string => {
