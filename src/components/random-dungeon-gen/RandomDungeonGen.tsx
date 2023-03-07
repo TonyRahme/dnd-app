@@ -1,7 +1,7 @@
 import React, {ReactElement, useEffect, useState} from "react";
 import { Chamber, RoomEntity, RoomShapeType } from "./random-dungeon-gen.model";
 import { startingAreaRegex, randomChamberOptions, RandomStartingArea, randomStartingAreaOptions, weightedRandom } from "./dungeon-graph.config";
-import { dungeonGenerateGraph, dungeonMap, exitMap } from "./dungeon-graph.service";
+import { dungeonGenerateGraph, dungeonMap, exitMap } from "./services/dungeon-graph.service";
 import GraphRenderTest from "../graph-render-test/GraphRenderTest";
 
 const RandomDungeonGen = (): ReactElement => {
@@ -20,7 +20,7 @@ const RandomDungeonGen = (): ReactElement => {
       }
     let startingAreaCode = weightedRandom(randomStartingAreaOptions);
     // const startingAreaCode = RandomStartingArea.Passage10Wide4Intersection;
-    startingAreaCode = RandomStartingArea.Rect80x20PassageEachLongWallDoorsEachShortWall;
+    // startingAreaCode = RandomStartingArea.Rect80x20PassageEachLongWallDoorsEachShortWall;
     // startingAreaCode = RandomStartingArea.Square20Door2WallsPassage1WallSecretDoor1Wall;
     const [dungeonArea, setDungeonArea] = useState(INIT_ROOMENTITY);
 
