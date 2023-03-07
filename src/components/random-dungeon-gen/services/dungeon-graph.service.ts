@@ -30,36 +30,6 @@ export const dungeonGenerateGraph = (startingAreaCode: string): RoomEntity => {
     
 }
 
-const getStartingAreaEntityModelReq = (areaCode: string): RoomEntityModelRequest => {
-    const data = extractArrayFromRegexMatch(areaCode, startingAreaRegex)
-    let entityType: string = "";
-    let exits: string[] = [];
-    
-    [entityType, exits] = shiftAndExtractEntityExitsArray(data);
-
-    let entity: string[] = extractArrayFromRegexMatch(entityType, EntitySplitRegex)
-    return buildEntityModelReq(entity, exits);
-};
-
-const shiftAndExtractEntityExitsArray = (data: string[]): any[] => {
-    let entityTypeDataShift = data.shift();
-    let exits = data ? data : [];
-    const entityType = entityTypeDataShift ? entityTypeDataShift : "";
-    return [entityType, exits];
-}
-
-const buildEntityModelReq = (entity: string[], exits: string[] = []): RoomEntityModelRequest => {
-    let [entityDesc, dimension] = entity;
-    let [entityCode] = entityDesc;
-
-    return {
-        entityCode: entityCode,
-        entityDesc: entityDesc,
-        dimension: dimension,
-        exits: exits,
-    }
-}
-
 const generateStartingArea = (startingAreaCode: string):RoomEntity => {
 
     const entityModel = getStartingAreaEntityModelReq(startingAreaCode);
@@ -92,6 +62,17 @@ const generateStartingArea = (startingAreaCode: string):RoomEntity => {
     
 }
 
+const getStartingAreaEntityModelReq = (areaCode: string): RoomEntityModelRequest => {
+    const data = EntityGenerator.extractArrayFromRegexMatch(areaCode, startingAreaRegex)
+    let entityType: string = "";
+    let exits: string[] = [];
+    
+    [entityType, exits] = EntityGenerator.shiftAndExtractEntityExitsArray(data);
+
+    let entity: string[] = EntityGenerator.extractArrayFromRegexMatch(entityType, EntitySplitRegex)
+    return EntityGenerator.buildEntityModelReq(entity, exits);
+};
+
 const generateStartingExits = (dungeonId: string, startingExits: string[]): string[] => {
     let exits: string[] = [];
     startingExits.forEach(startExit => {
@@ -123,13 +104,13 @@ const buildRandomExitEntities = (roomId: string, exits: ExitDTO[]) => {
                 buildPassageWay(roomId, exit.exitId);
                 break;
             case ExitType.Stair:
-                buildStartingStairs(roomId, exit);
+                buildRandomStairs(roomId, exit);
                 break;
             default:
                 buildRandomDoor(roomId, exit);
                 break;
-                }
-    })
+        }
+    });
 }
 
 const buildStartChamber = (newId: string ,entityModel: RoomEntityModelRequest): Chamber => {
@@ -138,8 +119,8 @@ const buildStartChamber = (newId: string ,entityModel: RoomEntityModelRequest): 
 
 const buildRandomChamber = (newId: string, entranceExitId: string): Chamber => {
     const randomChamber = weightedRandom(randomChamberOptions);
-    let entity: string[] = extractArrayFromRegexMatch(randomChamber, EntitySplitRegex);
-    const entityModel = buildEntityModelReq(entity);
+    let entity: string[] = EntityGenerator.extractArrayFromRegexMatch(randomChamber, EntitySplitRegex);
+    const entityModel = EntityGenerator.buildEntityModelReq(entity);
     
     return buildChamber(newId, entityModel, entranceExitId)
 }
@@ -181,7 +162,7 @@ const buildRandomPassage = (roomId: string) => {
     const randomPassage = weightedRandom(randomPassageOptions);
     //Debug
     // const randomPassage = RandomPassage.Straight20SecretDoor10percent;
-    const passageData = extractArrayFromRegexMatch(randomPassage, passageRegex);
+    const passageData = EntityGenerator.extractArrayFromRegexMatch(randomPassage, passageRegex);
     let length = 0;
     let width = 0;
     passageData.forEach(p => {
@@ -215,7 +196,7 @@ const buildPassageWay = (roomId: string, exitId: string) => {
     addExitPoint(newPassage);
 }
 
-const buildRandomStairs = (roomId: string) => {
+const buildRandomStairs = (roomId: string, exit: ExitDTO) => {
 
 }
 
@@ -224,28 +205,26 @@ const buildStartingStairs = (roomId: string, exit: ExitDTO) => {
 }
 
 const buildRandomDoor = (roomId: string, exit: ExitDTO) => {
-    const randomDoorType:string = weightedRandom(randomDoorTypeOptions);
     const randomBeyondDoor: string = weightedRandom(RandomBeyondDoorOptions);
-    let doorType: DoorType = DoorType.Other;
-    let isLocked: boolean = false;
     let isTrap: boolean = randomBeyondDoor === RandomBeyondExit.Trap;
-    [doorType, isLocked] = extractDoorPropFromCode(randomDoorType);
-    exit.isSecret = doorType === DoorType.Secret;
-
-    let newDoor: Door = EntityGenerator.genDoor(exit.exitId as string, doorType, [roomId], isLocked, isTrap, exit.isSecret);
-
-    addExitPoint(newDoor);
+    
+    buildDoor(roomId, exit, isTrap);
 }
 
-const buildStartingDoor = (roomId: string, exit?: ExitDTO) => {
+const buildStartingDoor = (roomId: string, exit: ExitDTO) => {
+    buildDoor(roomId, exit);
+}
 
+const buildDoor = (roomId: string, exit: ExitDTO, isTrap=false) => {
     const randomDoorType:string = weightedRandom(randomDoorTypeOptions);
-    const isSecret = exit?.isSecret !== undefined ? exit.isSecret : false;
     let doorType: DoorType = DoorType.Other;
     let isLocked: boolean = false;
     [doorType, isLocked] = extractDoorPropFromCode(randomDoorType);
-    let newDoor: Door = EntityGenerator.genDoor(exit?.exitId as string, doorType, [roomId], isLocked, false, isSecret);
+    let isSecret = doorType === DoorType.Secret;
+    
+    let newDoor: Door = EntityGenerator.genDoor(exit.exitId as string, doorType, [roomId], isLocked, isTrap, isSecret);
     addExitPoint(newDoor);
+
 }
 
 const buildRandomExits = (roomId: string,exitCount: number): string[] => {
@@ -337,7 +316,6 @@ const extractDoorPropFromCode = (code: string): any[] => {
     }
 }
 
-
 const generateDungeonId = (entityCode: string): string => {
     return `${entityCode}${dungeonMap.size}`
 }
@@ -366,7 +344,7 @@ const getExitTypeByCode = (exitCode: string): ExitType => {
 }
 
 const decodeStartingExitRegex = (roomId: string, exitCode: string): string[] => {
-    let exits = extractArrayFromRegexMatch(exitCode, exitsRegex);
+    let exits = EntityGenerator.extractArrayFromRegexMatch(exitCode, exitsRegex);
     console.log("exitMatches", exits);
     
     const [code, amount] = exits;
@@ -420,11 +398,6 @@ const addRoomsToExit = (roomId: string, exitId: string) => {
     newRoomIds.push(roomId)
     exit.roomIds = newRoomIds;
     exitMap.set(exitId, exit);
-}
-
-const extractArrayFromRegexMatch = (entityType: string, regex: RegExp): string[] => {
-    let match = entityType.match(regex);
-    return match !== null ? Array.from<string>(match) : [];
 }
 
 const addToExitQueue = (exitIds: string[]) => {

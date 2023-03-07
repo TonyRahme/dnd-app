@@ -1,5 +1,5 @@
 import { RegexDungeonRules } from "../dungeon-graph.config";
-import { Chamber, Dimension, Door, DoorType, ExitDTO, ExitType, Passage, PassageWay, RoomShapeType } from "../random-dungeon-gen.model";
+import { Chamber, Dimension, Door, DoorType, ExitDTO, ExitType, Passage, PassageWay, RoomEntityModelRequest, RoomShapeType } from "../random-dungeon-gen.model";
 
 export class EntityGenerator  {
 
@@ -95,6 +95,30 @@ export class EntityGenerator  {
         return newPassage;
     }
 
+    static buildEntityModelReq = (entity: string[], exits: string[] = []): RoomEntityModelRequest => {
+        let [entityDesc, dimension] = entity;
+        let [entityCode] = entityDesc;
+    
+        return {
+            entityCode: entityCode,
+            entityDesc: entityDesc,
+            dimension: dimension,
+            exits: exits,
+        }
+    }
+    
+    static extractArrayFromRegexMatch = (entityType: string, regex: RegExp): string[] => {
+        let match = entityType.match(regex);
+        return match !== null ? Array.from<string>(match) : [];
+    }
+
+    static shiftAndExtractEntityExitsArray = (data: string[]): any[] => {
+        let entityTypeDataShift = data.shift();
+        let exits = data ? data : [];
+        const entityType = entityTypeDataShift ? entityTypeDataShift : "";
+        return [entityType, exits];
+    }
+    
 }
 
 export default EntityGenerator;
