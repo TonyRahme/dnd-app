@@ -3,19 +3,13 @@ import { Chamber, RoomEntity, RoomShapeType } from "./random-dungeon-gen.model";
 import { startingAreaRegex, randomChamberOptions, RandomStartingArea, randomStartingAreaOptions, weightedRandom } from "./dungeon-graph.config";
 import { dungeonGenerateGraph, dungeonMap, exitMap } from "./services/dungeon-graph.service";
 import GraphRenderTest from "../graph-render-test/GraphRenderTest";
+import EntityGenerator from "./services/entity-generator.service";
 
 const RandomDungeonGen = (): ReactElement => {
 
     const INIT_ROOMENTITY: RoomEntity = {
         id:"-",
-        dimension: {
-          x: 0,
-          y: 0,
-          z: 0,
-          width: 50,
-          length: 50,
-          height: 0
-        },
+        dimension: EntityGenerator.genDimension(80, 40, 40, 60),
         exitsIds: []
       }
     let startingAreaCode = weightedRandom(randomStartingAreaOptions);
@@ -35,7 +29,8 @@ const RandomDungeonGen = (): ReactElement => {
                 Dungeons: {dungeonMap.size}<br/>
                 Exits: {exitMap.size}
             </p>
-            <GraphRenderTest key={dungeonArea.id} room={dungeonArea}/>
+            {/* <GraphRenderTest key={dungeonArea.id} room={dungeonArea}/> */}
+            <GraphRenderTest key={INIT_ROOMENTITY.id} room={INIT_ROOMENTITY}/>
         </div>
     )
 }

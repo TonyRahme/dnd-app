@@ -1,30 +1,83 @@
 import React, {ReactElement, useEffect, useState} from "react";
 import { createRoot } from 'react-dom/client';
-import { Stage, Layer, Star, Rect, Text } from 'react-konva';
-import { RoomEntity } from "../random-dungeon-gen/random-dungeon-gen.model";
+import { Stage, Layer, Star, Rect, Text, Circle } from 'react-konva';
+import { CardinalDirectionName, RoomEntity } from "../random-dungeon-gen/random-dungeon-gen.model";
+import EntityGenerator from "../random-dungeon-gen/services/entity-generator.service";
 import { DungeonRenderUI } from "./graph-render.config";
 
 
 const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
 
-    
-    return (
-        <div>
-            Graph Render Here!
-            <Stage width={200} height={200}>
-      <Layer>
-        <Rect
-        id={props.room.id}
-        x={10}
-        y={10}
-        width={props.room.dimension.width}
-        height={props.room.dimension.length}
-        fill="red"
-        />
-      </Layer>
-    </Stage>
-        </div>
-    )
+  let roomDim = props.room.dimension;
+  let width = 500;
+  let height = 400;
+  let offSetX = -(width - roomDim.width)/2;
+  let offSetY = -(height - roomDim.height)/2;
+
+  const randomColor = () => {
+    return '#'+(0x1000000+Math.random()*0xffffff).toString(16).substring(1,7);
+  }
+
+  const isFacingHorizontal = (direction: CardinalDirectionName): boolean => {
+    switch(direction) {
+      case CardinalDirectionName.East:
+      case CardinalDirectionName.West:
+        return true;
+      default:
+        return false;
+    }
+  }
+  let rotateRoomDim = EntityGenerator.entityRotate(props.room.dimension, false);
+  //Debug
+  console.log('original:', roomDim, 'rotated:', rotateRoomDim);
+  /**
+   * Konva uses width on x-axis and height on y-axis
+   */
+
+  return (
+      <div>
+        {props.room.description}
+        <Stage 
+         
+        width={width} 
+        height={height} 
+        className="border"
+        draggable={true}>
+          <Layer>
+            <Rect
+            id={props.room.id}
+            x={roomDim.x}
+            y={roomDim.y}
+            width={isFacingHorizontal(roomDim.direction) ? roomDim.length : roomDim.width}
+            height={isFacingHorizontal(roomDim.direction) ? roomDim.width : roomDim.length}
+            fill={randomColor()}
+            draggable={true}
+            />
+            <Circle
+            x={roomDim.center.x-2}
+            y={roomDim.center.y-2}
+            radius={4}
+            fill="black"
+            />
+            <Rect
+            id={props.room.id}
+            x={rotateRoomDim.x+100}
+            y={rotateRoomDim.y}
+            width={isFacingHorizontal(rotateRoomDim.direction) ? roomDim.length : roomDim.width}
+            height={isFacingHorizontal(rotateRoomDim.direction) ? roomDim.width : roomDim.length}
+            fill={randomColor()}
+            draggable={true}
+            />
+            <Circle
+            x={rotateRoomDim.center.x+100-2}
+            y={rotateRoomDim.center.y-2}
+            radius={4}
+            fill="black"
+            />
+          </Layer>
+        </Stage>
+      </div>
+  )
 }
 export default GraphRenderTest;
 

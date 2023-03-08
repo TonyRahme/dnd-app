@@ -129,15 +129,23 @@ const buildChamber = (newId: string ,entityModel: RoomEntityModelRequest, entran
     let [_, shape, size] = entityModel.entityDesc;
     let [length, width] = entityModel.dimension.split('x');
     const shapeValue = EntityGenerator.genShape(shape);
-    const newDim = EntityGenerator.genDimension(Number(length), Number(width));
     const isLargeSize = size === RegexDungeonRules.l_LargeChamber;
     let newExitIds: string[] = [];
-
+    let x = 0;
+    let y = 0;
+    let z = 0;
     if(entranceExitId){
+        let roomId = exitMap.get(entranceExitId)?.roomIds[0] || "";
+        let room = dungeonMap.get(roomId);
+        if(room){
+            x = room.dimension.x + room.dimension.width;
+            y = room.dimension.y + room.dimension.length;
+            z = room.dimension.z;
+        }
         let exitCount: number = isLargeSize ? 
         Number(weightedRandom(randomLargeExitOptions)) :
         Number(weightedRandom(randomNormalExitOptions));
-    
+        
         //debug to prevent memory leak
         if(dungeonMap.size > MAX_DUNGEON_SIZE) {
             exitCount = 0;
@@ -146,6 +154,8 @@ const buildChamber = (newId: string ,entityModel: RoomEntityModelRequest, entran
         // let newId = generateDungeonId(entityModel.entityCode);
         newExitIds =  [entranceExitId , ...buildRandomExits(newId, exitCount)];
     }
+
+    const newDim = EntityGenerator.genDimension(Number(length), Number(width), x, y, z);
     return EntityGenerator.genChamber(newId, newDim, shapeValue, isLargeSize, newExitIds);
 }
 
@@ -244,7 +254,7 @@ const buildRandomExits = (roomId: string,exitCount: number): string[] => {
 const buildBeyondExit = (exitId: string) => {
     // const randomBeyondDoorRoomType: string = weightedRandom(RandomBeyondDoorOptions);
     //TODO - refactor switch statement similar to generateStartingArea()
-    const randomBeyondExit: string = RandomBeyondExit.Passage;
+    const randomBeyondExit: string = RandomBeyondExit.Chamber;
 
     const exit = exitMap.get(exitId);
     if(exit === undefined) {

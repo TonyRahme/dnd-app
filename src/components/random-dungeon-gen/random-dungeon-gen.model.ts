@@ -73,14 +73,36 @@ export interface Dimension {
     length: number;
     width: number;
     height: number;
+    center: Vector2;
     x: number;
     y: number;
     z: number;
+    direction: CardinalDirectionName;
+}
+
+export const enum CardinalDirectionName {
+    East='East',
+    North='North',
+    West='West',
+    South='South',
+}
+
+export const CardinalDirectionVector2 = {
+    [CardinalDirectionName.East]: {x: 1, y:0} as Vector2,
+    [CardinalDirectionName.North]: {x: 0, y:1} as Vector2,
+    [CardinalDirectionName.West]: {x: -1, y:0} as Vector2,
+    [CardinalDirectionName.South]: {x: 0, y:-1} as Vector2,
+}
+
+
+
+export interface Vector2 {
+    x: number;
+    y: number;
 }
 
 export interface RoomEntity extends DungeonEntity {
     exitsIds: string[];
-    dimension: Dimension;
 }
 
 export interface ExitEntity extends DungeonEntity {
@@ -91,4 +113,5 @@ export interface ExitEntity extends DungeonEntity {
 export interface DungeonEntity {
     id: string;
     description?: string;
+    dimension: Dimension;
 }
