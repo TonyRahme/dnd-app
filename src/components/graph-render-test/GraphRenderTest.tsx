@@ -1,14 +1,15 @@
 import React, {ReactElement, useEffect, useState} from "react";
 import { createRoot } from 'react-dom/client';
 import { Stage, Layer, Star, Rect, Text, Circle } from 'react-konva';
-import { CardinalDirectionName, RoomEntity } from "../random-dungeon-gen/random-dungeon-gen.model";
+import { CardinalDirectionName, Dimension, RoomEntity } from "../random-dungeon-gen/random-dungeon-gen.model";
+import { exitMap } from "../random-dungeon-gen/services/dungeon-graph.service";
 import EntityGenerator from "../random-dungeon-gen/services/entity-generator.service";
 import { DungeonRenderUI } from "./graph-render.config";
 
 
 const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
 
-  let roomDim = props.room.dimension;
+  let roomDim = props.startRoom.dimension;
   let width = 500;
   let height = 400;
   let offSetX = -(width - roomDim.width)/2;
@@ -27,7 +28,17 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
         return false;
     }
   }
-  let rotateRoomDim = EntityGenerator.entityRotate(props.room.dimension, false);
+  
+  const getRoomsAfterStart = (exitIds: string[]): RoomEntity[] => {
+    let roomEntities: RoomEntity[] = [];
+    exitIds.forEach(exitId => {
+      const roomId  = props.exitMap.get(exitId)?.roomIds[1] || "";
+      const roomEntity = props.dungeonMap.get(roomId);
+      if(roomEntity) roomEntities.push(roomEntity);
+    });
+    return roomEntities;
+  }
+  let rotateRoomDim = EntityGenerator.entityRotate(props.startRoom.dimension, false);
   //Debug
   console.log('original:', roomDim, 'rotated:', rotateRoomDim);
   /**
@@ -36,7 +47,7 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
 
   return (
       <div>
-        {props.room.description}
+        {props.startRoom.description}
         <Stage 
          
         width={width} 
@@ -45,7 +56,7 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
         draggable={true}>
           <Layer>
             <Rect
-            id={props.room.id}
+            id={props.startRoom.id}
             x={roomDim.x}
             y={roomDim.y}
             width={isFacingHorizontal(roomDim.direction) ? roomDim.length : roomDim.width}
@@ -59,21 +70,16 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
             radius={4}
             fill="black"
             />
-            <Rect
-            id={props.room.id}
-            x={rotateRoomDim.x+100}
-            y={rotateRoomDim.y}
-            width={isFacingHorizontal(rotateRoomDim.direction) ? roomDim.length : roomDim.width}
-            height={isFacingHorizontal(rotateRoomDim.direction) ? roomDim.width : roomDim.length}
-            fill={randomColor()}
-            draggable={true}
-            />
-            <Circle
-            x={rotateRoomDim.center.x+100-2}
-            y={rotateRoomDim.center.y-2}
-            radius={4}
-            fill="black"
-            />
+            {getRoomsAfterStart(props.startRoom.exitsIds).map((room) => 
+              (<Rect 
+              id={room.id}
+              x={room.dimension.x}
+              y={room.dimension.y}
+              width={isFacingHorizontal(room.dimension.direction) ? room.dimension.length : room.dimension.width}
+              height={isFacingHorizontal(room.dimension.direction) ? room.dimension.width : room.dimension.length}
+              fill={randomColor()}
+              />)
+            )}
           </Layer>
         </Stage>
       </div>
