@@ -141,9 +141,10 @@ export class EntityGenerator  {
         
         for(let i = 0;i<exitCount;i++){
             deltaRadian += radianDelta;
+            deltaRadian += Math.random()*Math.PI/4
             exitPositions.push({
-                x: roomTransform.position.x + absDimension.x*Number(Math.cos(deltaRadian).toFixed(2))/2 + roomTransform.center.x,
-                y: roomTransform.position.y + absDimension.y*Number(Math.sin(deltaRadian).toFixed(2))/2 + roomTransform.center.y,
+                x: Number(Math.cos(deltaRadian).toFixed(2))*(roomTransform.length/2) + roomTransform.center.x,
+                y: Number(Math.sin(deltaRadian).toFixed(2))*(roomTransform.width/2) + roomTransform.center.y,
             });
         }
         return exitPositions;
@@ -173,6 +174,22 @@ export class EntityGenerator  {
         const cardinalName = this.getCardinalDirectionNameByVector(cardinal2D);
         
         return cardinalName;
+    }
+
+    static fixExitToRoomWall = (exitPosition: Vector2, exitDirection: CardinalDirectionName, newRoomTransform: Transform): Vector2 => {
+        const topLeftCorner = newRoomTransform.position;
+        const bottomRightCorner = new Vector3(
+            newRoomTransform.position.x+newRoomTransform.length,
+            newRoomTransform.position.y+newRoomTransform.width,
+            newRoomTransform.position.z);
+        const cardinalVector = CardinalDirectionVector2[exitDirection];
+        let fixedExitPosition = exitPosition;
+        if(this.isHorizontal(exitDirection)){
+            fixedExitPosition.x = cardinalVector.x === -1 ? topLeftCorner.x : bottomRightCorner.x;
+        } else {
+            fixedExitPosition.y = cardinalVector.y === -1 ? bottomRightCorner.y : topLeftCorner.y;
+        }
+        return fixedExitPosition;
     }
 
     static getCardinalDirectionNameByVector = (vector2: Vector2): CardinalDirectionName => {
