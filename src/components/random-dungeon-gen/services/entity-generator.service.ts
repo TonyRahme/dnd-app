@@ -136,25 +136,37 @@ export class EntityGenerator  {
         let startRadian = this.isHorizontal(roomTransform.direction) ? Math.acos(-directionVector.x) : -Math.asin(directionVector.y);
         let deltaRadian = startRadian;
 
-        let absTransform = EntityGenerator.checkRotationTransforms(roomTransform.direction, roomTransform);
+        let absDimension = EntityGenerator.checkRotationTransforms(roomTransform.direction, roomTransform);
         let exitPositions: Vector2[] = [];
         
         for(let i = 0;i<exitCount;i++){
             deltaRadian += radianDelta;
             exitPositions.push({
-                x: roomTransform.position.x + absTransform.x*Number(Math.cos(deltaRadian).toFixed(2))/2 + roomTransform.center.x,
-                y: roomTransform.position.y + absTransform.y*Number(Math.sin(deltaRadian).toFixed(2))/2 + roomTransform.center.y,
+                x: roomTransform.position.x + absDimension.x*Number(Math.cos(deltaRadian).toFixed(2))/2 + roomTransform.center.x,
+                y: roomTransform.position.y + absDimension.y*Number(Math.sin(deltaRadian).toFixed(2))/2 + roomTransform.center.y,
             });
         }
         return exitPositions;
     }
 
     static getRelativeDirection = (doorPosition: Vector2, roomTransform: Transform): CardinalDirectionName => {
-        const roomStartPosition = new Vector2(roomTransform.position.x, roomTransform.position.y);
-        const roomEndPosition = new Vector2(roomStartPosition.x + roomTransform.length, roomStartPosition.y + roomTransform.width);
+        const roomLeftCornerPoint = new Vector2(roomTransform.position.x, roomTransform.position.y);
+        const roomRightCornerPoint = new Vector2(roomLeftCornerPoint.x + roomTransform.length, roomLeftCornerPoint.y);
+        const roomCenterPoint = roomTransform.center;
         //TODO: use a=(yb-ya)/(xb-xa)
-        const cardinalX = doorPosition.x === roomStartPosition.x ? -1 : doorPosition.x === roomEndPosition.x ? 1 : 0;
-        const cardinalY = doorPosition.y === roomStartPosition.y ? 1 : doorPosition.y === roomEndPosition.y ? -1 : 0;
+        const leftRatio = (roomCenterPoint.y - roomLeftCornerPoint.y)/(roomCenterPoint.x - roomLeftCornerPoint.x);
+        const leftOffset = (roomCenterPoint.y - leftRatio*roomCenterPoint.x);
+        const leftY = Number((leftRatio*doorPosition.x + leftOffset).toFixed(2));
+        
+
+        const rightRatio = (roomCenterPoint.y - roomRightCornerPoint.y)/(roomCenterPoint.x - roomRightCornerPoint.x);
+        const rightOffset = (roomCenterPoint.y - rightRatio*roomCenterPoint.x);
+        const rightY = Number((rightRatio*doorPosition.x + rightOffset).toFixed(2));
+
+        const cardinalX = doorPosition.y - leftY >= 0 && doorPosition.y - rightY <= 0 ? -1 
+        : doorPosition.y - leftY <= 0 && doorPosition.y - rightY >= 0 ? 1 : 0;
+        const cardinalY = doorPosition.y - leftY < 0 && doorPosition.y - rightY < 0 ? 1 
+        : doorPosition.y - leftY > 0 && doorPosition.y - rightY > 0  ? -1 : 0;
         
         const cardinal2D = new Vector2(cardinalX, cardinalY);
         

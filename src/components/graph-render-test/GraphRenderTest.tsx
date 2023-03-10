@@ -110,12 +110,21 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
               (<Circle
               key={exit.id}
               id={exit.id}
-              x={exit.transform.position.x*SCALE}
-              y={exit.transform.position.y*SCALE}
+              x={exit.transform.center.x*SCALE-2}
+              y={exit.transform.center.y*SCALE-2}
               radius={exit.transform.width}
               fill={randomColor()}
               />)
             )}
+            {getAllRooms().map((room) =>
+            (
+              <Circle 
+              x={room.transform.center.x*SCALE-2}
+              y={room.transform.center.y*SCALE-2}
+              radius={4}
+              fill="black"
+              />
+            ))}
           </Layer>
         </Stage>
       </div>
