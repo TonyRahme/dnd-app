@@ -15,8 +15,12 @@ export interface Chamber extends RoomEntity {
 export interface ExitDTO {
     exitType: ExitType;
     exitId: string;
-    toId?: string;
     isSecret: boolean;
+    position: Vector2;
+    direction: CardinalDirectionName;
+    isTrap: boolean;
+    isLocked: boolean;
+    toId?: string;
 }
 
 export interface Door extends ExitEntity {
@@ -96,9 +100,21 @@ export const CardinalDirectionVector2 = {
 
 
 
-export interface Vector2 {
-    x: number;
-    y: number;
+export class Vector2 {
+    public x: number;
+    public y: number;
+    constructor(newX=0, newY=0){
+        this.x=newX;
+        this.y=newY;
+    }
+}
+
+export class Vector3 extends Vector2 {
+    public z: number;
+    constructor(newX=0, newY=0, newZ=0){
+        super(newX, newY);
+        this.z=newZ;
+    }
 }
 
 export interface RoomEntity extends DungeonEntity {
