@@ -1,7 +1,7 @@
 import React, {ReactElement, useEffect, useState} from "react";
 import { createRoot } from 'react-dom/client';
 import { Stage, Layer, Star, Rect, Text, Circle } from 'react-konva';
-import { CardinalDirectionName, Transform, RoomEntity } from "../random-dungeon-gen/random-dungeon-gen.model";
+import { CardinalDirectionName, Transform, RoomEntity, ExitEntity } from "../random-dungeon-gen/random-dungeon-gen.model";
 import { exitMap } from "../random-dungeon-gen/services/dungeon-graph.service";
 import EntityGenerator from "../random-dungeon-gen/services/entity-generator.service";
 import { DungeonRenderUI } from "./graph-render.config";
@@ -9,11 +9,14 @@ import { DungeonRenderUI } from "./graph-render.config";
 
 const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
 
+  const SCALE = 1;
+  
   let transform = props.startRoom.transform;
   let width = 500;
   let height = 400;
   let offSetX = -(width - transform.width)/2;
   let offSetY = -(height - transform.height)/2;
+  
 
   const randomColor = () => {
     return '#'+(0x1000000+Math.random()*0xffffff).toString(16).substring(1,7);
@@ -29,6 +32,15 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
     }
   }
   
+  const getAllRooms = (): RoomEntity[] => {
+    return Array.from(props.dungeonMap.values());
+  }
+
+  const getAllExits = (): ExitEntity[] => {
+    return Array.from(props.exitMap.values());
+  }
+
+
   const getRoomsAfterStart = (exitIds: string[]): RoomEntity[] => {
     let roomEntities: RoomEntity[] = [];
     exitIds.forEach(exitId => {
@@ -38,9 +50,20 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
     });
     return roomEntities;
   }
-  let rotateTransform = EntityGenerator.entityRotate(props.startRoom.transform, false);
+
+  const getExitsAfterStart = (exitIds: string[]):ExitEntity[] => {
+    let exitEntities: ExitEntity[] = [];
+    exitIds.forEach(exitId => {
+      const exit = props.exitMap.get(exitId);
+      if(exit) exitEntities.push(exit);
+    });
+    return exitEntities;
+  }
+
+
+  // let rotateTransform = EntityGenerator.entityRotate(props.startRoom.transform, false);
   //Debug
-  console.log('original:', transform, 'rotated:', rotateTransform);
+  // console.log('original:', transform, 'rotated:', rotateTransform);
   /**
    * Konva uses width on x-axis and height on y-axis
    */
@@ -55,28 +78,41 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
         className="border"
         draggable={true}>
           <Layer>
-            <Rect
+            {/* <Rect
+            key={props.startRoom.id}
             id={props.startRoom.id}
-            x={transform.position.x}
-            y={transform.position.y}
-            width={isFacingHorizontal(transform.direction) ? transform.length : transform.width}
-            height={isFacingHorizontal(transform.direction) ? transform.width : transform.length}
+            x={transform.position.x * SCALE}
+            y={transform.position.y * SCALE}
+            width={isFacingHorizontal(transform.direction) ? transform.length*SCALE : transform.width*SCALE}
+            height={isFacingHorizontal(transform.direction) ? transform.width*SCALE : transform.length*SCALE}
             fill={randomColor()}
             draggable={true}
             />
             <Circle
-            x={transform.center.x-2}
-            y={transform.center.y-2}
+            x={transform.center.x*SCALE-2}
+            y={transform.center.y*SCALE-2}
             radius={4}
             fill="black"
-            />
-            {getRoomsAfterStart(props.startRoom.exitsIds).map((room) => 
+            /> */}
+            {getAllRooms().map((room) => 
               (<Rect 
+              key={room.id}
               id={room.id}
-              x={room.transform.position.x}
-              y={room.transform.position.y}
-              width={isFacingHorizontal(room.transform.direction) ? room.transform.length : room.transform.width}
-              height={isFacingHorizontal(room.transform.direction) ? room.transform.width : room.transform.length}
+              x={room.transform.position.x*SCALE}
+              y={room.transform.position.y*SCALE}
+              width={room.transform.length*SCALE}
+              height={room.transform.width*SCALE}
+              fill={randomColor()}
+              draggable={true}
+              />)
+            )}
+            {getAllExits().map((exit) => 
+              (<Circle
+              key={exit.id}
+              id={exit.id}
+              x={exit.transform.position.x*SCALE}
+              y={exit.transform.position.y*SCALE}
+              radius={exit.transform.width}
               fill={randomColor()}
               />)
             )}

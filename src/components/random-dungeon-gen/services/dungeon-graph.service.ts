@@ -18,7 +18,8 @@ export const dungeonGenerateGraph = (startingAreaCode: string): RoomEntity => {
     exitQueue.push(...startingArea.exitsIds);
     while (exitQueue.length) {
         let newExit = exitQueue.shift();
-        if (newExit !== undefined) {
+        //Debug
+        if (newExit !== undefined && dungeonMap.size <= startingArea.exitsIds.length) {
             buildBeyondExit(newExit);
         }
     }
@@ -74,10 +75,7 @@ const getStartingAreaEntityModelReq = (areaCode: string): RoomEntityModelRequest
 };
 
 const generateStartingExits = (dungeonId: string, startingExits: string[]): string[] => {
-    let exits: string[] = [];
-    startingExits.forEach(startExit => {
-        exits.push(...decodeStartingExitRegex(dungeonId, startExit));
-    });
+    let exits: string[] = decodeStartingExitRegex(dungeonId, startingExits);
     return exits;
 }
 
@@ -223,7 +221,7 @@ const buildRandomPassage = (roomId: string) => {
 }
 
 const buildPassageWay = (roomId: string, exit: ExitDTO) => {
-    let newPassage: PassageWay =  EntityGenerator.genPassageWay(exit.exitId, [roomId], exit.position);
+    let newPassage: PassageWay =  EntityGenerator.genPassageWay(exit.exitId, [roomId], exit);
     addExitPoint(newPassage);
 }
 
@@ -360,6 +358,7 @@ const addExitPoint = (exit: ExitEntity) => {
 const getExitTypeByCode = (exitCode: string): ExitType => {
     switch(exitCode) {
         case RegexDungeonRules.D_Door:
+        case RegexDungeonRules.sD_SecretDoor:
             return ExitType.Door;
         case RegexDungeonRules.S_Stairs:
             return ExitType.Stair;
@@ -368,32 +367,38 @@ const getExitTypeByCode = (exitCode: string): ExitType => {
     }
 }
 
-const decodeStartingExitRegex = (roomId: string, exitCode: string): string[] => {
-    let exits = EntityGenerator.extractArrayFromRegexMatch(exitCode, exitsRegex);
-    console.log("exitMatches", exits);
+const decodeStartingExitRegex = (roomId: string, exitCodes: string[]): string[] => {
+    let codes: string[] = [];
+    let newExitResults: string[] = [];
+    exitCodes.forEach(exitCode => {
+        let exitCodeAmount = EntityGenerator.extractArrayFromRegexMatch(exitCode, exitsRegex);
+        console.log("exitMatches", exitCodeAmount);
+        
+        const [code, amount] = exitCodeAmount;
     
-    const [code, amount] = exits;
-    let newAmount: number = 0;
+        switch(amount) {
+            case 'lW':
+            case 'sW':
+                codes.push(code,code);
+                break;
+            case 'mW':
+                codes.push(code);
+                break;
+            default:
+                for(let i=0;i<Number(amount);i++) {
+                    codes.push(code);
+                }
+        }
+    
+    });
+    newExitResults = addNewExitsInStartingRoom(roomId, codes);
 
-    switch(amount) {
-        case 'lW':
-        case 'sW':
-            newAmount = 2;
-            break;
-        case 'mW':
-            newAmount = 1;
-            break;
-        default:
-            newAmount = Number(amount);
-    }
-
-    const isSecret: boolean = code === RegexDungeonRules.sD_SecretDoor;
-    return addNewExitsInStartingRoom(roomId, code, newAmount, isSecret);
+    return newExitResults;
 
 }
 
-const addNewExitsInStartingRoom = (roomId: string, exitCode: string, amount: number, isSecret = false): string[] => {
-    
+const addNewExitsInStartingRoom = (roomId: string, exitCodes: string[]): string[] => {
+    let amount = exitCodes.length;
     let newStartingExits: ExitDTO[] = [];
     
     let roomTransform = dungeonMap.get(roomId)?.transform;
@@ -402,12 +407,17 @@ const addNewExitsInStartingRoom = (roomId: string, exitCode: string, amount: num
     }
     
     let exitPositions: Vector2[] = EntityGenerator.genExitPointsByRoomId(roomTransform, amount);
-    for(let i = 0; i < exitPositions.length; i++) {
+    for(let i = 0; i < amount; i++) {
+        let exitCode = exitCodes[i];
         let exitType = getExitTypeByCode(exitCode);
         let exitId = generateExitId(exitCode);
-        const direction = CardinalDirectionName.East; //TODO calculate exit direction
+        let isSecret = exitCode === RegexDungeonRules.sD_SecretDoor;
+        let direction = EntityGenerator.getRelativeDirection(exitPositions[i], roomTransform);
         newStartingExits.push(EntityGenerator.genExit(exitId, exitType, exitPositions[i], direction, isSecret));
     }
+    //Debug
+    console.log('new starting exits', newStartingExits);
+
     buildStartingExitEntities(roomId, newStartingExits);
     
     return newStartingExits.map(exit => exit.exitId || "");
