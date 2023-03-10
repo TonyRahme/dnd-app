@@ -9,7 +9,7 @@ const RandomDungeonGen = (): ReactElement => {
 
     const INIT_ROOMENTITY: RoomEntity = {
         id:"-",
-        dimension: EntityGenerator.genDimension({x:80, y:40}, {x:40, y:60,z:0},CardinalDirectionName.North),
+        transform: EntityGenerator.genTransform({x:80, y:40}, {x:40, y:60,z:0},CardinalDirectionName.North),
         exitsIds: []
       }
     let startingAreaCode = weightedRandom(randomStartingAreaOptions);

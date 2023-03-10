@@ -1,7 +1,7 @@
 import React, {ReactElement, useEffect, useState} from "react";
 import { createRoot } from 'react-dom/client';
 import { Stage, Layer, Star, Rect, Text, Circle } from 'react-konva';
-import { CardinalDirectionName, Dimension, RoomEntity } from "../random-dungeon-gen/random-dungeon-gen.model";
+import { CardinalDirectionName, Transform, RoomEntity } from "../random-dungeon-gen/random-dungeon-gen.model";
 import { exitMap } from "../random-dungeon-gen/services/dungeon-graph.service";
 import EntityGenerator from "../random-dungeon-gen/services/entity-generator.service";
 import { DungeonRenderUI } from "./graph-render.config";
@@ -9,11 +9,11 @@ import { DungeonRenderUI } from "./graph-render.config";
 
 const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
 
-  let roomDim = props.startRoom.dimension;
+  let transform = props.startRoom.transform;
   let width = 500;
   let height = 400;
-  let offSetX = -(width - roomDim.width)/2;
-  let offSetY = -(height - roomDim.height)/2;
+  let offSetX = -(width - transform.width)/2;
+  let offSetY = -(height - transform.height)/2;
 
   const randomColor = () => {
     return '#'+(0x1000000+Math.random()*0xffffff).toString(16).substring(1,7);
@@ -38,9 +38,9 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
     });
     return roomEntities;
   }
-  let rotateRoomDim = EntityGenerator.entityRotate(props.startRoom.dimension, false);
+  let rotateTransform = EntityGenerator.entityRotate(props.startRoom.transform, false);
   //Debug
-  console.log('original:', roomDim, 'rotated:', rotateRoomDim);
+  console.log('original:', transform, 'rotated:', rotateTransform);
   /**
    * Konva uses width on x-axis and height on y-axis
    */
@@ -57,26 +57,26 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
           <Layer>
             <Rect
             id={props.startRoom.id}
-            x={roomDim.x}
-            y={roomDim.y}
-            width={isFacingHorizontal(roomDim.direction) ? roomDim.length : roomDim.width}
-            height={isFacingHorizontal(roomDim.direction) ? roomDim.width : roomDim.length}
+            x={transform.position.x}
+            y={transform.position.y}
+            width={isFacingHorizontal(transform.direction) ? transform.length : transform.width}
+            height={isFacingHorizontal(transform.direction) ? transform.width : transform.length}
             fill={randomColor()}
             draggable={true}
             />
             <Circle
-            x={roomDim.center.x-2}
-            y={roomDim.center.y-2}
+            x={transform.center.x-2}
+            y={transform.center.y-2}
             radius={4}
             fill="black"
             />
             {getRoomsAfterStart(props.startRoom.exitsIds).map((room) => 
               (<Rect 
               id={room.id}
-              x={room.dimension.x}
-              y={room.dimension.y}
-              width={isFacingHorizontal(room.dimension.direction) ? room.dimension.length : room.dimension.width}
-              height={isFacingHorizontal(room.dimension.direction) ? room.dimension.width : room.dimension.length}
+              x={room.transform.position.x}
+              y={room.transform.position.y}
+              width={isFacingHorizontal(room.transform.direction) ? room.transform.length : room.transform.width}
+              height={isFacingHorizontal(room.transform.direction) ? room.transform.width : room.transform.length}
               fill={randomColor()}
               />)
             )}

@@ -1,5 +1,5 @@
 import { RandomBeyondExit, RandomBeyondDoorOptions, randomChamberOptions, RandomDoorType, randomDoorTypeOptions, randomExitTypeOptions, randomLargeExitOptions, randomNormalExitOptions, randomPassageOptions, RandomStartingArea, RegexDungeonRules, startingAreaRegex, weightedRandom, RandomPassage } from "../dungeon-graph.config";
-import { Chamber, RoomShapeType, Dimension, Passage, RoomEntityModelRequest, ExitDTO, RoomEntity, ExitEntity, ExitType, Door, DoorType, PassageWay, Vector2, CardinalDirectionVector2, Vector3, CardinalDirectionName } from "../random-dungeon-gen.model";
+import { Chamber, RoomShapeType, Transform, Passage, RoomEntityModelRequest, ExitDTO, RoomEntity, ExitEntity, ExitType, Door, DoorType, PassageWay, Vector2, CardinalDirectionVector2, Vector3, CardinalDirectionName } from "../random-dungeon-gen.model";
 import EntityGenerator from "./entity-generator.service";
 
 export const dungeonMap: Map<string, RoomEntity> = new Map();
@@ -76,7 +76,7 @@ const getStartingAreaEntityModelReq = (areaCode: string): RoomEntityModelRequest
 const generateStartingExits = (dungeonId: string, startingExits: string[]): string[] => {
     let exits: string[] = [];
     startingExits.forEach(startExit => {
-        exits.push(... decodeStartingExitRegex(dungeonId, startExit));
+        exits.push(...decodeStartingExitRegex(dungeonId, startExit));
     });
     return exits;
 }
@@ -123,33 +123,33 @@ const buildRandomChamber = (newId: string, entranceExitId: string): Chamber => {
     const entityModel = EntityGenerator.buildEntityModelReq(entity);
     
     const newChamber =  buildChamber(newId, entityModel);
-    let newChamberDim = newChamber.dimension;
+    let newChamberTransform = newChamber.transform;
     let exitEntity = exitMap.get(entranceExitId);
     let room = dungeonMap.get(exitEntity?.roomIds[0] || "");
     if(!room || !exitEntity){
         return newChamber;
     }
     let vector3 = new Vector3();
-    switch(exitEntity.dimension.direction){
+    switch(exitEntity.transform.direction){
         case CardinalDirectionName.North:
-            vector3.x = exitEntity.dimension.x - newChamberDim.length/2;
-            vector3.y = exitEntity.dimension.y - newChamberDim.width;
-            vector3.z = newChamberDim.z;
+            vector3.x = exitEntity.transform.position.x - newChamberTransform.length/2;
+            vector3.y = exitEntity.transform.position.y - newChamberTransform.width;
+            vector3.z = newChamberTransform.position.z;
             break;
         case CardinalDirectionName.South:
-            vector3.x = exitEntity.dimension.x - newChamberDim.length/2;
-            vector3.y = exitEntity.dimension.y;
-            vector3.z = newChamberDim.z;
+            vector3.x = exitEntity.transform.position.x - newChamberTransform.length/2;
+            vector3.y = exitEntity.transform.position.y;
+            vector3.z = newChamberTransform.position.z;
             break;
         case CardinalDirectionName.West:
-            vector3.x = exitEntity.dimension.x - newChamberDim.length;
-            vector3.y = exitEntity.dimension.y - newChamberDim.width/2;
-            vector3.z = newChamberDim.z;
+            vector3.x = exitEntity.transform.position.x - newChamberTransform.length;
+            vector3.y = exitEntity.transform.position.y - newChamberTransform.width/2;
+            vector3.z = newChamberTransform.position.z;
             break;
         default: //East
-            vector3.x = exitEntity.dimension.x;
-            vector3.y = exitEntity.dimension.y - newChamberDim.width/2;
-            vector3.z = newChamberDim.z;
+            vector3.x = exitEntity.transform.position.x;
+            vector3.y = exitEntity.transform.position.y - newChamberTransform.width/2;
+            vector3.z = newChamberTransform.position.z;
     }
     let exitCount: number = newChamber.isLarge ? 
     Number(weightedRandom(randomLargeExitOptions)) :
@@ -159,9 +159,9 @@ const buildRandomChamber = (newId: string, entranceExitId: string): Chamber => {
     if(dungeonMap.size > MAX_DUNGEON_SIZE) {
         exitCount = 0;
     }
-    newChamberDim = EntityGenerator.genDimension({x: newChamberDim.length, y: newChamberDim.width}, vector3, exitEntity.dimension.direction);
-    let newExitIds =  [entranceExitId , ...buildRandomExits(newId, newChamberDim, exitCount)];
-    newChamber.dimension = newChamberDim;
+    newChamberTransform = EntityGenerator.genTransform({x: newChamberTransform.length, y: newChamberTransform.width}, vector3, exitEntity.transform.direction);
+    let newExitIds =  [entranceExitId , ...buildRandomExits(newId, newChamberTransform, exitCount)];
+    newChamber.transform = newChamberTransform;
     newChamber.exitsIds = newExitIds;
     return newChamber;
 }
@@ -173,15 +173,15 @@ const buildChamber = (newId: string ,entityModel: RoomEntityModelRequest) => {
     const isLargeSize = size === RegexDungeonRules.l_LargeChamber;
     let newChamber: Vector3 = {x:0,y:0, z:0};
     let vector2: Vector2 = {x: Number(length), y: Number(width)};
-    const newDim = EntityGenerator.genDimension(vector2, newChamber);
-    return EntityGenerator.genChamber(newId, newDim, shapeValue, isLargeSize);
+    const newTransform = EntityGenerator.genTransform(vector2, newChamber);
+    return EntityGenerator.genChamber(newId, newTransform, shapeValue, isLargeSize);
 }
 
 const buildStartPassage = (newId: string,entityModel: RoomEntityModelRequest): Passage => {
     let [width] = entityModel.dimension.split('w');
-    const newDim: Dimension = EntityGenerator.genDimension(10, Number(width));
+    const newTransform: Transform = EntityGenerator.genTransform(10, Number(width));
     
-    return EntityGenerator.genPassage(newId, newDim);
+    return EntityGenerator.genPassage(newId, newTransform);
 }
 
 const buildRandomPassage = (roomId: string) => {
@@ -218,8 +218,8 @@ const buildRandomPassage = (roomId: string) => {
     console.log("passageData", passageData);
     //TODO figure out passageData to be added to exitsIds
     const newId = generateDungeonId(RegexDungeonRules.P_Passage);
-    const newDim = EntityGenerator.genDimension(Number(length), 10);
-    return EntityGenerator.genPassage(newId, newDim, exits);
+    const newTransform = EntityGenerator.genTransform(Number(length), 10);
+    return EntityGenerator.genPassage(newId, newTransform, exits);
 }
 
 const buildPassageWay = (roomId: string, exit: ExitDTO) => {
@@ -259,15 +259,15 @@ const buildDoor = (roomId: string, exit: ExitDTO) => {
 
 }
 
-const buildRandomExits = (newRoomId: string, newRoomDimension: Dimension, exitCount: number): string[] => {
+const buildRandomExits = (newRoomId: string, newRoomTransform: Transform, exitCount: number): string[] => {
     let exits: ExitDTO[] = [];
 
-    let exitPositions: Vector2[] = EntityGenerator.genExitPointsByRoomId(newRoomDimension, exitCount);
+    let exitPositions: Vector2[] = EntityGenerator.genExitPointsByRoomId(newRoomTransform, exitCount);
     for(let i = 0; i < exitPositions.length; i++) {
         let exitCode = weightedRandom(randomExitTypeOptions);
         let exitId = generateExitId(exitCode);
         let exitType = getExitTypeByCode(exitCode);
-        let direction = EntityGenerator.getRelativeDirection(exitPositions[i], newRoomDimension);
+        let direction = EntityGenerator.getRelativeDirection(exitPositions[i], newRoomTransform);
         exits.push(EntityGenerator.genExit(exitId, exitType, exitPositions[i], direction));
     }
     //TODO - Implement function equivalent to buildStartingExitEntities
@@ -396,12 +396,12 @@ const addNewExitsInStartingRoom = (roomId: string, exitCode: string, amount: num
     
     let newStartingExits: ExitDTO[] = [];
     
-    let roomDimension = dungeonMap.get(roomId)?.dimension;
-    if(!roomDimension){
+    let roomTransform = dungeonMap.get(roomId)?.transform;
+    if(!roomTransform){
         return [];
     }
     
-    let exitPositions: Vector2[] = EntityGenerator.genExitPointsByRoomId(roomDimension, amount);
+    let exitPositions: Vector2[] = EntityGenerator.genExitPointsByRoomId(roomTransform, amount);
     for(let i = 0; i < exitPositions.length; i++) {
         let exitType = getExitTypeByCode(exitCode);
         let exitId = generateExitId(exitCode);

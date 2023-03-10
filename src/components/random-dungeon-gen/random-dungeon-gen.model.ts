@@ -73,14 +73,12 @@ export enum DoorType {
     Other,
 }
 
-export interface Dimension {
+export interface Transform {
     length: number;
     width: number;
     height: number;
     center: Vector2;
-    x: number;
-    y: number;
-    z: number;
+    position: Vector3;
     direction: CardinalDirectionName;
 }
 
@@ -129,5 +127,5 @@ export interface ExitEntity extends DungeonEntity {
 export interface DungeonEntity {
     id: string;
     description?: string;
-    dimension: Dimension;
+    transform: Transform;
 }
