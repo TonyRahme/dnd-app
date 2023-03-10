@@ -1,5 +1,5 @@
 import { RegexDungeonRules } from "../dungeon-graph.config";
-import { Chamber, Transform, CardinalDirectionVector2, Door, DoorType, ExitDTO, ExitType, Passage, PassageWay, RoomEntityModelRequest, RoomShapeType, Vector2, CardinalDirectionName, Vector3 } from "../random-dungeon-gen.model";
+import { Chamber, Transform, CardinalDirectionVector2, Door, DoorType, ExitDTO, ExitType, Passage, PassageWay, RoomEntityModelRequest, RoomShapeType, Vector2, CardinalDirectionName, Vector3, RoomEntity, ExitEntity } from "../random-dungeon-gen.model";
 
 export class EntityGenerator  {
 
@@ -154,7 +154,7 @@ export class EntityGenerator  {
         const roomLeftCornerPoint = new Vector2(roomTransform.position.x, roomTransform.position.y);
         const roomRightCornerPoint = new Vector2(roomLeftCornerPoint.x + roomTransform.length, roomLeftCornerPoint.y);
         const roomCenterPoint = roomTransform.center;
-        //TODO: use a=(yb-ya)/(xb-xa)
+        
         const leftRatio = (roomCenterPoint.y - roomLeftCornerPoint.y)/(roomCenterPoint.x - roomLeftCornerPoint.x);
         const leftOffset = (roomCenterPoint.y - leftRatio*roomCenterPoint.x);
         const leftY = Number((leftRatio*doorPosition.x + leftOffset).toFixed(2));
@@ -190,6 +190,32 @@ export class EntityGenerator  {
             fixedExitPosition.y = cardinalVector.y === -1 ? bottomRightCorner.y : topLeftCorner.y;
         }
         return fixedExitPosition;
+    }
+
+    static fixRoomToExitDirection = (roomEntityTransform: Transform, exitEntityTransform: Transform):Transform =>{
+        let vector3 = new Vector3();
+    switch(exitEntityTransform.direction){
+        case CardinalDirectionName.North:
+            vector3.x = exitEntityTransform.position.x - roomEntityTransform.length/2;
+            vector3.y = exitEntityTransform.position.y - roomEntityTransform.width;
+            vector3.z = roomEntityTransform.position.z;
+            break;
+        case CardinalDirectionName.South:
+            vector3.x = exitEntityTransform.position.x - roomEntityTransform.length/2;
+            vector3.y = exitEntityTransform.position.y;
+            vector3.z = roomEntityTransform.position.z;
+            break;
+        case CardinalDirectionName.West:
+            vector3.x = exitEntityTransform.position.x - roomEntityTransform.length;
+            vector3.y = exitEntityTransform.position.y - roomEntityTransform.width/2;
+            vector3.z = roomEntityTransform.position.z;
+            break;
+        default: //East
+            vector3.x = exitEntityTransform.position.x;
+            vector3.y = exitEntityTransform.position.y - roomEntityTransform.width/2;
+            vector3.z = roomEntityTransform.position.z;
+    }
+        return this.genTransform({x: roomEntityTransform.length, y: roomEntityTransform.width}, vector3, exitEntityTransform.direction);
     }
 
     static getCardinalDirectionNameByVector = (vector2: Vector2): CardinalDirectionName => {

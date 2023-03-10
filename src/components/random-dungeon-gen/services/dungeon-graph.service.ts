@@ -127,28 +127,9 @@ const buildRandomChamber = (newId: string, entranceExitId: string): Chamber => {
     if(!room || !exitEntity){
         return newChamber;
     }
-    let vector3 = new Vector3();
-    switch(exitEntity.transform.direction){
-        case CardinalDirectionName.North:
-            vector3.x = exitEntity.transform.position.x - chamberTransform.length/2;
-            vector3.y = exitEntity.transform.position.y - chamberTransform.width;
-            vector3.z = chamberTransform.position.z;
-            break;
-        case CardinalDirectionName.South:
-            vector3.x = exitEntity.transform.position.x - chamberTransform.length/2;
-            vector3.y = exitEntity.transform.position.y;
-            vector3.z = chamberTransform.position.z;
-            break;
-        case CardinalDirectionName.West:
-            vector3.x = exitEntity.transform.position.x - chamberTransform.length;
-            vector3.y = exitEntity.transform.position.y - chamberTransform.width/2;
-            vector3.z = chamberTransform.position.z;
-            break;
-        default: //East
-            vector3.x = exitEntity.transform.position.x;
-            vector3.y = exitEntity.transform.position.y - chamberTransform.width/2;
-            vector3.z = chamberTransform.position.z;
-    }
+    
+    let newChamberTransform = EntityGenerator.fixRoomToExitDirection(chamberTransform, exitEntity.transform);
+    
     let exitCount: number = newChamber.isLarge ? 
     Number(weightedRandom(randomLargeExitOptions)) :
     Number(weightedRandom(randomNormalExitOptions));
@@ -157,7 +138,6 @@ const buildRandomChamber = (newId: string, entranceExitId: string): Chamber => {
     if(dungeonMap.size > MAX_DUNGEON_SIZE) {
         exitCount = 0;
     }
-    let newChamberTransform = EntityGenerator.genTransform({x: chamberTransform.length, y: chamberTransform.width}, vector3, exitEntity.transform.direction);
     let newExitIds =  [entranceExitId , ...buildRandomExits(newId, newChamberTransform, exitCount)];
     newChamber.transform = newChamberTransform;
     newChamber.exitsIds = newExitIds;
