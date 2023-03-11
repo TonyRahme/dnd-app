@@ -1,7 +1,8 @@
 import { RegexDungeonRules } from "../dungeon-graph.config";
 import { Chamber, Transform, CardinalDirectionVector2, Door, DoorType, ExitDTO, ExitType, Passage, PassageWay, RoomEntityModelRequest, RoomShapeType, Vector2, CardinalDirectionName, Vector3, RoomEntity, ExitEntity } from "../random-dungeon-gen.model";
+import Utilities from "./utilities.service";
 
-export class EntityGenerator  {
+class EntityGenerator  {
 
     private constructor() {}
     
@@ -22,11 +23,6 @@ export class EntityGenerator  {
                 return RoomShapeType.None;
         }
     }
-
-    static isHorizontal = (cardinalName: CardinalDirectionName): boolean => {
-        return CardinalDirectionVector2[cardinalName].y === 0;
-    }
-    
     
     public static genTransform(dimension2D: Vector2, position3D: Vector3, dir?: CardinalDirectionName): Transform;
     public static genTransform(length?:number, width?:number, x?:number, y?:number, z?:number, dir?: CardinalDirectionName):Transform;
@@ -51,7 +47,7 @@ export class EntityGenerator  {
             dir = xOrDir as CardinalDirectionName;
         }
         
-        let isHorizontal = this.isHorizontal(dir);
+        let isHorizontal = Utilities.isHorizontal(dir);
         let centerX = isHorizontal ? position.x + dimension.x/2 : position.x + dimension.y/2;
         let centerY = isHorizontal ? position.y + dimension.y/2 : position.y + dimension.x/2;
         return {
@@ -64,48 +60,13 @@ export class EntityGenerator  {
         }
     }
 
-    static cardinalRotate = (cardinalDirection: CardinalDirectionName, clockwise=true): CardinalDirectionName => {
-        if(clockwise) {
-            switch(cardinalDirection) {
-                case CardinalDirectionName.North:
-                    return CardinalDirectionName.East;
-                case CardinalDirectionName.West:
-                    return CardinalDirectionName.North;
-                case CardinalDirectionName.South:
-                    return CardinalDirectionName.West;
-                default:
-                    return CardinalDirectionName.South;
-            }
-        } else {
-            switch(cardinalDirection) {
-                case CardinalDirectionName.North:
-                    return CardinalDirectionName.West;
-                case CardinalDirectionName.West:
-                    return CardinalDirectionName.South;
-                case CardinalDirectionName.South:
-                    return CardinalDirectionName.East;
-                default:
-                    return CardinalDirectionName.North;
-                
-            }            
-        }
-    }
-
-    static entityRotate = (transform: Transform, clockwise=true): Transform => {
-        let newDirection:CardinalDirectionName  = this.cardinalRotate(transform.direction, clockwise);
-        let newDirectionTransform = this.checkRotationTransforms(newDirection, transform);
+    static genTransformRotate = (transform: Transform, clockwise=true): Transform => {
+        let newDirection:CardinalDirectionName  = Utilities.cardinalRotate(transform.direction, clockwise);
+        let newDirectionTransform = Utilities.getAbsoluteDimensions(newDirection, transform);
         let newX = transform.center.x - newDirectionTransform.x/2;
         let newY = transform.center.y - newDirectionTransform.y/2;
         return this.genTransform(transform.length, transform.width, newX, newY, transform.position.z, newDirection);
     }
-
-    static checkRotationTransforms = (direction: CardinalDirectionName, transform: Transform): Vector2 => {
-        let isHorizontal = this.isHorizontal(direction);
-        return {
-            x: isHorizontal? transform.length : transform.width,
-            y: isHorizontal? transform.width : transform.length,
-        }
-    } 
 
     static genExit = (
         exitId: string,
@@ -127,117 +88,6 @@ export class EntityGenerator  {
             isLocked: isLocked,
         }
         return exit;
-    }
-
-    static genExitPointsByRoomId = (roomTransform: Transform, exitCount: number): Vector2[] => {
-        let directionVector = CardinalDirectionVector2[roomTransform.direction];
-        
-        let radianDelta = 2*Math.PI / (exitCount + 1);
-        let startRadian = this.isHorizontal(roomTransform.direction) ? Math.acos(-directionVector.x) : -Math.asin(directionVector.y);
-        let deltaRadian = startRadian;
-
-        let absDimension = EntityGenerator.checkRotationTransforms(roomTransform.direction, roomTransform);
-        let exitPositions: Vector2[] = [];
-        
-        for(let i = 0;i<exitCount;i++){
-            deltaRadian += radianDelta;
-            deltaRadian += Math.random()*Math.PI/4
-            exitPositions.push({
-                x: Number(Math.cos(deltaRadian).toFixed(2))*(roomTransform.length/2) + roomTransform.center.x,
-                y: Number(Math.sin(deltaRadian).toFixed(2))*(roomTransform.width/2) + roomTransform.center.y,
-            });
-        }
-        return exitPositions;
-    }
-
-    static getRelativeDirection = (doorPosition: Vector2, roomTransform: Transform): CardinalDirectionName => {
-        const roomLeftCornerPoint = new Vector2(roomTransform.position.x, roomTransform.position.y);
-        const roomRightCornerPoint = new Vector2(roomLeftCornerPoint.x + roomTransform.length, roomLeftCornerPoint.y);
-        const roomCenterPoint = roomTransform.center;
-        
-        const leftRatio = (roomCenterPoint.y - roomLeftCornerPoint.y)/(roomCenterPoint.x - roomLeftCornerPoint.x);
-        const leftOffset = (roomCenterPoint.y - leftRatio*roomCenterPoint.x);
-        const leftY = Number((leftRatio*doorPosition.x + leftOffset).toFixed(2));
-        
-
-        const rightRatio = (roomCenterPoint.y - roomRightCornerPoint.y)/(roomCenterPoint.x - roomRightCornerPoint.x);
-        const rightOffset = (roomCenterPoint.y - rightRatio*roomCenterPoint.x);
-        const rightY = Number((rightRatio*doorPosition.x + rightOffset).toFixed(2));
-
-        const cardinalX = doorPosition.y - leftY >= 0 && doorPosition.y - rightY <= 0 ? -1 
-        : doorPosition.y - leftY <= 0 && doorPosition.y - rightY >= 0 ? 1 : 0;
-        const cardinalY = doorPosition.y - leftY < 0 && doorPosition.y - rightY < 0 ? 1 
-        : doorPosition.y - leftY > 0 && doorPosition.y - rightY > 0  ? -1 : 0;
-        
-        const cardinal2D = new Vector2(cardinalX, cardinalY);
-        
-        const cardinalName = this.getCardinalDirectionNameByVector(cardinal2D);
-        
-        return cardinalName;
-    }
-
-    static fixExitToRoomWall = (exitPosition: Vector2, exitDirection: CardinalDirectionName, newRoomTransform: Transform): Vector2 => {
-        const topLeftCorner = newRoomTransform.position;
-        const bottomRightCorner = new Vector3(
-            newRoomTransform.position.x+newRoomTransform.length,
-            newRoomTransform.position.y+newRoomTransform.width,
-            newRoomTransform.position.z);
-        const cardinalVector = CardinalDirectionVector2[exitDirection];
-        let fixedExitPosition = exitPosition;
-        if(this.isHorizontal(exitDirection)){
-            fixedExitPosition.x = cardinalVector.x === -1 ? topLeftCorner.x : bottomRightCorner.x;
-        } else {
-            fixedExitPosition.y = cardinalVector.y === -1 ? bottomRightCorner.y : topLeftCorner.y;
-        }
-        return fixedExitPosition;
-    }
-
-    static fixRoomToExitDirection = (roomEntityTransform: Transform, exitEntityTransform: Transform):Transform =>{
-        let vector3 = new Vector3();
-    switch(exitEntityTransform.direction){
-        case CardinalDirectionName.North:
-            vector3.x = exitEntityTransform.position.x - roomEntityTransform.length/2;
-            vector3.y = exitEntityTransform.position.y - roomEntityTransform.width;
-            vector3.z = roomEntityTransform.position.z;
-            break;
-        case CardinalDirectionName.South:
-            vector3.x = exitEntityTransform.position.x - roomEntityTransform.length/2;
-            vector3.y = exitEntityTransform.position.y;
-            vector3.z = roomEntityTransform.position.z;
-            break;
-        case CardinalDirectionName.West:
-            vector3.x = exitEntityTransform.position.x - roomEntityTransform.length;
-            vector3.y = exitEntityTransform.position.y - roomEntityTransform.width/2;
-            vector3.z = roomEntityTransform.position.z;
-            break;
-        default: //East
-            vector3.x = exitEntityTransform.position.x;
-            vector3.y = exitEntityTransform.position.y - roomEntityTransform.width/2;
-            vector3.z = roomEntityTransform.position.z;
-    }
-        return this.genTransform({x: roomEntityTransform.length, y: roomEntityTransform.width}, vector3, exitEntityTransform.direction);
-    }
-
-    static getCardinalDirectionNameByVector = (vector2: Vector2): CardinalDirectionName => {
-        let result = CardinalDirectionName.East;
-        Object.entries(CardinalDirectionVector2).forEach(([cardinalName, cardinalVector]) => {
-            if(vector2.x === cardinalVector.x && vector2.y === cardinalVector.y){
-                result = cardinalName as CardinalDirectionName;
-            }
-        });
-        //defaults to East;
-        return result;
-    }
-
-    static getCardinalDirectionVectorByName = (name: CardinalDirectionName): Vector2  => {
-        let result = CardinalDirectionVector2[CardinalDirectionName.East];
-        Object.entries(CardinalDirectionVector2).forEach(([cardinalName, cardinalVector]) => {
-            if(name === cardinalName){
-                result = cardinalVector;
-            }
-        });
-        //defaults to East;
-        return result;        
     }
 
     static genPassageWay = (newId: string, newRoomIds: string[], exit: ExitDTO): PassageWay => {
@@ -301,7 +151,7 @@ export class EntityGenerator  {
         return newPassage;
     }
 
-    static buildEntityModelReq = (entity: string[], exits: string[] = []): RoomEntityModelRequest => {
+    static genEntityModelReq = (entity: string[], exits: string[] = []): RoomEntityModelRequest => {
         let [entityDesc, dimension] = entity;
         let [entityCode] = entityDesc;
     
@@ -311,18 +161,6 @@ export class EntityGenerator  {
             dimension: dimension,
             exits: exits,
         }
-    }
-    
-    static extractArrayFromRegexMatch = (entityType: string, regex: RegExp): string[] => {
-        let match = entityType.match(regex);
-        return match !== null ? Array.from<string>(match) : [];
-    }
-
-    static shiftAndExtractEntityExitsArray = (data: string[]): any[] => {
-        let entityTypeDataShift = data.shift();
-        let exits = data ? data : [];
-        const entityType = entityTypeDataShift ? entityTypeDataShift : "";
-        return [entityType, exits];
     }
     
 }

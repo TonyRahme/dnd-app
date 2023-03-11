@@ -1,6 +1,7 @@
 import { RandomBeyondExit, RandomBeyondDoorOptions, randomChamberOptions, RandomDoorType, randomDoorTypeOptions, randomExitTypeOptions, randomLargeExitOptions, randomNormalExitOptions, randomPassageOptions, RandomStartingArea, RegexDungeonRules, startingAreaRegex, weightedRandom, RandomPassage } from "../dungeon-graph.config";
 import { Chamber, RoomShapeType, Transform, Passage, RoomEntityModelRequest, ExitDTO, RoomEntity, ExitEntity, ExitType, Door, DoorType, PassageWay, Vector2, CardinalDirectionVector2, Vector3, CardinalDirectionName } from "../random-dungeon-gen.model";
 import EntityGenerator from "./entity-generator.service";
+import Utilities from "./utilities.service";
 
 export const dungeonMap: Map<string, RoomEntity> = new Map();
 export const exitMap: Map<string, ExitEntity> = new Map();
@@ -64,14 +65,14 @@ const generateStartingArea = (startingAreaCode: string):RoomEntity => {
 }
 
 const getStartingAreaEntityModelReq = (areaCode: string): RoomEntityModelRequest => {
-    const data = EntityGenerator.extractArrayFromRegexMatch(areaCode, startingAreaRegex)
+    const data = Utilities.extractArrayFromRegexMatch(areaCode, startingAreaRegex)
     let entityType: string = "";
     let exits: string[] = [];
     
-    [entityType, exits] = EntityGenerator.shiftAndExtractEntityExitsArray(data);
+    [entityType, exits] = Utilities.shiftAndExtractEntityExitsArray(data);
 
-    let entity: string[] = EntityGenerator.extractArrayFromRegexMatch(entityType, EntitySplitRegex)
-    return EntityGenerator.buildEntityModelReq(entity, exits);
+    let entity: string[] = Utilities.extractArrayFromRegexMatch(entityType, EntitySplitRegex)
+    return EntityGenerator.genEntityModelReq(entity, exits);
 };
 
 const generateStartingExits = (dungeonId: string, startingExits: string[]): string[] => {
@@ -117,8 +118,8 @@ const buildStartChamber = (newId: string ,entityModel: RoomEntityModelRequest): 
 
 const buildRandomChamber = (newId: string, entranceExitId: string): Chamber => {
     const randomChamber = weightedRandom(randomChamberOptions);
-    let entity: string[] = EntityGenerator.extractArrayFromRegexMatch(randomChamber, EntitySplitRegex);
-    const entityModel = EntityGenerator.buildEntityModelReq(entity);
+    let entity: string[] = Utilities.extractArrayFromRegexMatch(randomChamber, EntitySplitRegex);
+    const entityModel = EntityGenerator.genEntityModelReq(entity);
     
     const newChamber =  buildChamber(newId, entityModel);
     let chamberTransform = newChamber.transform;
@@ -127,8 +128,8 @@ const buildRandomChamber = (newId: string, entranceExitId: string): Chamber => {
     if(!room || !exitEntity){
         return newChamber;
     }
-    
-    let newChamberTransform = EntityGenerator.fixRoomToExitDirection(chamberTransform, exitEntity.transform);
+    let vector3 = Utilities.fixRoomToExitDirection(chamberTransform, exitEntity.transform);
+    let newChamberTransform = EntityGenerator.genTransform({x: chamberTransform.length, y: chamberTransform.width}, vector3, exitEntity.transform.direction);;
     
     let exitCount: number = newChamber.isLarge ? 
     Number(weightedRandom(randomLargeExitOptions)) :
@@ -168,7 +169,7 @@ const buildRandomPassage = (roomId: string) => {
     const randomPassage = weightedRandom(randomPassageOptions);
     //Debug
     // const randomPassage = RandomPassage.Straight20SecretDoor10percent;
-    const passageData = EntityGenerator.extractArrayFromRegexMatch(randomPassage, passageRegex);
+    const passageData = Utilities.extractArrayFromRegexMatch(randomPassage, passageRegex);
     let length = 0;
     let width = 0;
     passageData.forEach(p => {
@@ -240,13 +241,13 @@ const buildDoor = (roomId: string, exit: ExitDTO) => {
 const buildRandomExits = (newRoomId: string, newRoomTransform: Transform, exitCount: number): string[] => {
     let exits: ExitDTO[] = [];
 
-    let exitPositions: Vector2[] = EntityGenerator.genExitPointsByRoomId(newRoomTransform, exitCount);
+    let exitPositions: Vector2[] = Utilities.getExitPointsByRoomId(newRoomTransform, exitCount);
     exitPositions.forEach(exitPosition => {
             let exitCode = weightedRandom(randomExitTypeOptions);
             let exitId = generateExitId(exitCode);
             let exitType = getExitTypeByCode(exitCode);
-            let exitDirection = EntityGenerator.getRelativeDirection(exitPosition, newRoomTransform);
-            let fixedExitPosition = EntityGenerator.fixExitToRoomWall(exitPosition, exitDirection, newRoomTransform);
+            let exitDirection = Utilities.getRelativeDirection(exitPosition, newRoomTransform);
+            let fixedExitPosition = Utilities.fixExitToRoomWall(exitPosition, exitDirection, newRoomTransform);
             exits.push(EntityGenerator.genExit(exitId, exitType, fixedExitPosition, exitDirection));
         }); 
     //TODO - Implement function equivalent to buildStartingExitEntities
@@ -352,7 +353,7 @@ const decodeStartingExitRegex = (roomId: string, exitCodes: string[]): string[] 
     let codes: string[] = [];
     let newExitResults: string[] = [];
     exitCodes.forEach(exitCode => {
-        let exitCodeAmount = EntityGenerator.extractArrayFromRegexMatch(exitCode, exitsRegex);
+        let exitCodeAmount = Utilities.extractArrayFromRegexMatch(exitCode, exitsRegex);
         console.log("exitMatches", exitCodeAmount);
         
         const [code, amount] = exitCodeAmount;
@@ -387,14 +388,14 @@ const addNewExitsInStartingRoom = (roomId: string, exitCodes: string[]): string[
         return [];
     }
     
-    let exitPositions: Vector2[] = EntityGenerator.genExitPointsByRoomId(roomTransform, amount);
+    let exitPositions: Vector2[] = Utilities.getExitPointsByRoomId(roomTransform, amount);
     for(let i = 0; i < amount; i++) {
         let exitCode = exitCodes[i];
         let exitType = getExitTypeByCode(exitCode);
         let exitId = generateExitId(exitCode);
         let isSecret = exitCode === RegexDungeonRules.sD_SecretDoor;
-        let direction = EntityGenerator.getRelativeDirection(exitPositions[i], roomTransform);
-        let fixedExitPosition = EntityGenerator.fixExitToRoomWall(exitPositions[i], direction, roomTransform);
+        let direction = Utilities.getRelativeDirection(exitPositions[i], roomTransform);
+        let fixedExitPosition = Utilities.fixExitToRoomWall(exitPositions[i], direction, roomTransform);
         newStartingExits.push(EntityGenerator.genExit(exitId, exitType, fixedExitPosition, direction, isSecret));
     }
     //Debug
