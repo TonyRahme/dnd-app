@@ -1,4 +1,4 @@
-import { CardinalDirectionName, CardinalDirectionVector2, Transform, Vector2, Vector3 } from "../random-dungeon-gen.model";
+import { CardinalDirectionName, CardinalDirectionVector2, RoomEntity, RotateDirection, Transform, Vector2, Vector3 } from "../random-dungeon-gen.model";
 
 class Utilities {
 
@@ -43,33 +43,57 @@ class Utilities {
         }
     }
 
-    static cardinalRotate = (cardinalDirection: CardinalDirectionName, clockwise=true): CardinalDirectionName => {
-        if(clockwise) {
-            switch(cardinalDirection) {
-                case CardinalDirectionName.North:
-                    return CardinalDirectionName.East;
-                case CardinalDirectionName.West:
-                    return CardinalDirectionName.North;
-                case CardinalDirectionName.South:
-                    return CardinalDirectionName.West;
-                default:
-                    return CardinalDirectionName.South;
-            }
-        } else {
-            switch(cardinalDirection) {
-                case CardinalDirectionName.North:
-                    return CardinalDirectionName.West;
-                case CardinalDirectionName.West:
-                    return CardinalDirectionName.South;
-                case CardinalDirectionName.South:
-                    return CardinalDirectionName.East;
-                default:
-                    return CardinalDirectionName.North;
-                
-            }            
+    static cardinalRotateRight = (cardinalDirection: CardinalDirectionName): CardinalDirectionName => {
+        switch(cardinalDirection) {
+            case CardinalDirectionName.North:
+                return CardinalDirectionName.East;
+            case CardinalDirectionName.West:
+                return CardinalDirectionName.North;
+            case CardinalDirectionName.South:
+                return CardinalDirectionName.West;
+            default:
+                return CardinalDirectionName.South;
         }
     }
 
+    static cardinalRotateLeft = (cardinalDirection: CardinalDirectionName): CardinalDirectionName => {
+        switch(cardinalDirection) {
+            case CardinalDirectionName.North:
+                return CardinalDirectionName.West;
+            case CardinalDirectionName.West:
+                return CardinalDirectionName.South;
+            case CardinalDirectionName.South:
+                return CardinalDirectionName.East;
+            default:
+                return CardinalDirectionName.North;   
+        }
+    }
+
+    static cardinalRotateFlip = (cardinalDirection: CardinalDirectionName): CardinalDirectionName => {
+        switch(cardinalDirection) {
+            case CardinalDirectionName.North:
+                return CardinalDirectionName.South;
+            case CardinalDirectionName.West:
+                return CardinalDirectionName.East;
+            case CardinalDirectionName.South:
+                return CardinalDirectionName.North;
+            default:
+                return CardinalDirectionName.West;   
+        }
+    }
+    
+
+    static cardinalRotate = (cardinalDirection: CardinalDirectionName, rotateDirection = RotateDirection.Right): CardinalDirectionName => {
+        switch(rotateDirection){
+            case RotateDirection.Flip:
+                return this.cardinalRotateFlip(cardinalDirection);
+            case RotateDirection.Left:
+                return this.cardinalRotateLeft(cardinalDirection);
+            default:
+                return this.cardinalRotateRight(cardinalDirection);
+                
+        }
+    }
 
     static getExitPointsByRoomId = (roomTransform: Transform, exitCount: number): Vector2[] => {
         let directionVector = CardinalDirectionVector2[roomTransform.direction];

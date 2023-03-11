@@ -1,5 +1,5 @@
 import { RegexDungeonRules } from "../dungeon-graph.config";
-import { Chamber, Transform, CardinalDirectionVector2, Door, DoorType, ExitDTO, ExitType, Passage, PassageWay, RoomEntityModelRequest, RoomShapeType, Vector2, CardinalDirectionName, Vector3, RoomEntity, ExitEntity } from "../random-dungeon-gen.model";
+import { Chamber, Transform, CardinalDirectionVector2, Door, DoorType, ExitDTO, ExitType, Passage, PassageWay, RoomEntityModelRequest, RoomShapeType, Vector2, CardinalDirectionName, Vector3, RoomEntity, ExitEntity, RotateDirection } from "../random-dungeon-gen.model";
 import Utilities from "./utilities.service";
 
 class EntityGenerator  {
@@ -60,8 +60,8 @@ class EntityGenerator  {
         }
     }
 
-    static genTransformRotate = (transform: Transform, clockwise=true): Transform => {
-        let newDirection:CardinalDirectionName  = Utilities.cardinalRotate(transform.direction, clockwise);
+    static genTransformRotate = (transform: Transform, rotateDirection: RotateDirection): Transform => {
+        let newDirection:CardinalDirectionName  = Utilities.cardinalRotate(transform.direction, rotateDirection);
         let newDirectionTransform = Utilities.getAbsoluteDimensions(newDirection, transform);
         let newX = transform.center.x - newDirectionTransform.x/2;
         let newY = transform.center.y - newDirectionTransform.y/2;
