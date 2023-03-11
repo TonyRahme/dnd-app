@@ -82,6 +82,12 @@ export interface Transform {
     direction: CardinalDirectionName;
 }
 
+export enum RotateDirection {
+    Left,
+    Right,
+    Flip,
+}
+
 export const enum CardinalDirectionName {
     East='East',
     North='North',
