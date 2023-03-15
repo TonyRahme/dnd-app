@@ -20,7 +20,7 @@ export const dungeonGenerateGraph = (startingAreaCode: string): RoomEntity => {
     while (exitQueue.length) {
         let newExit = exitQueue.shift();
         //Debug
-        if (newExit !== undefined && dungeonMap.size <= startingArea.exitsIds.length) {
+        if (newExit !== undefined) {
             buildBeyondExit(newExit);
         }
     }
@@ -55,9 +55,10 @@ const generateStartingArea = (startingAreaCode: string):RoomEntity => {
     if(start.description !== "error") {
         const newRoom: RoomEntity = start as RoomEntity;
         addDungeonArea(newRoom);
-        const newExits = generateStartingExits(newRoom.id, entityModel.exits);
-        addExitsToDungeonArea(newExits, newRoom.id);
-        start = dungeonMap.get(newRoom.id) as RoomEntity;
+        const newExitDTOs = generateStartingExitDTOs(newRoom.id, entityModel.exits);
+        buildStartingExitEntities(newRoom.id, newExitDTOs);
+        const newExitIds = newExitDTOs.map(exit => exit.exitId || "");
+        start = addExitsToDungeonArea(newExitIds, newRoom.id) as RoomEntity;
     }
 
     return start as RoomEntity;
@@ -75,9 +76,10 @@ const getStartingAreaEntityModelReq = (areaCode: string): RoomEntityModelRequest
     return EntityGenerator.genEntityModelReq(entity, exits);
 };
 
-const generateStartingExits = (dungeonId: string, startingExits: string[]): string[] => {
-    let exits: string[] = decodeStartingExitRegex(dungeonId, startingExits);
-    return exits;
+const generateStartingExitDTOs = (dungeonId: string, startingExits: string[]): ExitDTO[] => {
+    let decodedExits = Utilities.decodeExitRegex(startingExits, exitsRegex);
+    let exitDTOs: ExitDTO[] = addNewExitsInStartingRoom(dungeonId, decodedExits);
+    return exitDTOs;
 }
 
 const buildStartingExitEntities = (roomId: string, exits: ExitDTO[]) => {
@@ -123,8 +125,8 @@ const buildRandomChamber = (newId: string, entranceExitId: string): Chamber => {
     
     const newChamber =  buildChamber(newId, entityModel);
     let chamberTransform = newChamber.transform;
-    let exitEntity = exitMap.get(entranceExitId);
-    let room = dungeonMap.get(exitEntity?.roomIds[0] || "");
+    let exitEntity = getExitById(entranceExitId);
+    let room = getDungeonAreaById(exitEntity.roomIds[0] || "");
     if(!room || !exitEntity){
         return newChamber;
     }
@@ -148,6 +150,9 @@ const buildRandomChamber = (newId: string, entranceExitId: string): Chamber => {
 const buildChamber = (newId: string ,entityModel: RoomEntityModelRequest) => {
     let [_, shape, size] = entityModel.entityDesc;
     let [length, width] = entityModel.dimension.split('x');
+    if (width === undefined){
+        width = length;
+    }
     const shapeValue = EntityGenerator.genShape(shape);
     const isLargeSize = size === RegexDungeonRules.l_LargeChamber;
     let newChamber: Vector3 = {x:0,y:0, z:0};
@@ -192,7 +197,7 @@ const buildRandomPassage = (roomId: string) => {
         }
     })
     
-    const exits: string[] = [dungeonMap.get(roomId)?.exitsIds.at(0) || ""];
+    const exits: string[] = [getDungeonAreaById(roomId).exitsIds.at(0) || ""];
     
     console.log("passageData", passageData);
     //TODO figure out passageData to be added to exitsIds
@@ -227,13 +232,13 @@ const buildStartingDoor = (roomId: string, exit: ExitDTO) => {
 
 const buildDoor = (roomId: string, exit: ExitDTO) => {
     const randomDoorType:string = weightedRandom(randomDoorTypeOptions);
-    let doorType: DoorType = DoorType.Other;
+    let doorType: DoorType;
     let isLocked: boolean = false;
     [doorType, isLocked] = extractDoorPropFromCode(randomDoorType);
     exit.isLocked = isLocked;
     exit.isSecret = doorType === DoorType.Secret;
     
-    let newDoor: Door = EntityGenerator.genDoor(exit.exitId as string, doorType, [roomId], exit);
+    let newDoor: Door = EntityGenerator.genDoor(exit.exitId, doorType, [roomId], exit);
     addExitPoint(newDoor);
 
 }
@@ -260,12 +265,9 @@ const buildBeyondExit = (exitId: string) => {
     //TODO - refactor switch statement similar to generateStartingArea()
     const randomBeyondExit: string = RandomBeyondExit.Chamber;
 
-    const exit = exitMap.get(exitId);
-    if(exit === undefined) {
-        return;
-    }
-    let room = dungeonMap.get(exit.roomIds?.length ? exit.roomIds[0] : '');
-    let roomId = room !== undefined ? room.id : "";
+    const exit = getExitById(exitId);
+    let room = getDungeonAreaById(exit.roomIds?.length ? exit.roomIds[0] : '');
+    let roomId = room.id;
     let beyondDoor: Partial<RoomEntity>;
     let newId = "";
     
@@ -329,12 +331,20 @@ const addDungeonArea = (room: RoomEntity) => {
     dungeonMap.set(room.id, room);
 }
 
+const getDungeonAreaById = (roomId: string): RoomEntity => {
+    return dungeonMap.get(roomId) as RoomEntity;
+}
+
 const generateExitId = (entityCode: string): string => {
     return `${entityCode}${exitCount++}`
 }
 
 const addExitPoint = (exit: ExitEntity) => {
     exitMap.set(exit.id, exit);
+}
+
+const getExitById = (exitId: string): ExitEntity => {
+    return exitMap.get(exitId) as ExitEntity;
 }
 
 const getExitTypeByCode = (exitCode: string): ExitType => {
@@ -349,41 +359,11 @@ const getExitTypeByCode = (exitCode: string): ExitType => {
     }
 }
 
-const decodeStartingExitRegex = (roomId: string, exitCodes: string[]): string[] => {
-    let codes: string[] = [];
-    let newExitResults: string[] = [];
-    exitCodes.forEach(exitCode => {
-        let exitCodeAmount = Utilities.extractArrayFromRegexMatch(exitCode, exitsRegex);
-        console.log("exitMatches", exitCodeAmount);
-        
-        const [code, amount] = exitCodeAmount;
-    
-        switch(amount) {
-            case 'lW':
-            case 'sW':
-                codes.push(code,code);
-                break;
-            case 'mW':
-                codes.push(code);
-                break;
-            default:
-                for(let i=0;i<Number(amount);i++) {
-                    codes.push(code);
-                }
-        }
-    
-    });
-    newExitResults = addNewExitsInStartingRoom(roomId, codes);
-
-    return newExitResults;
-
-}
-
-const addNewExitsInStartingRoom = (roomId: string, exitCodes: string[]): string[] => {
+const addNewExitsInStartingRoom = (roomId: string, exitCodes: string[]): ExitDTO[] => {
     let amount = exitCodes.length;
     let newStartingExits: ExitDTO[] = [];
     
-    let roomTransform = dungeonMap.get(roomId)?.transform;
+    let roomTransform = getDungeonAreaById(roomId).transform;
     if(!roomTransform){
         return [];
     }
@@ -400,26 +380,18 @@ const addNewExitsInStartingRoom = (roomId: string, exitCodes: string[]): string[
     }
     //Debug
     // console.log('new starting exits', newStartingExits);
-
-    buildStartingExitEntities(roomId, newStartingExits);
-    
-    return newStartingExits.map(exit => exit.exitId || "");
+    return newStartingExits;
 }
 
-const addExitsToDungeonArea = (exits: string[], id: string) => {
-    let room: RoomEntity | undefined = dungeonMap.get(id);
-    if (room === undefined) {
-        return;
-    }
+const addExitsToDungeonArea = (exits: string[], id: string): RoomEntity => {
+    let room: RoomEntity = getDungeonAreaById(id);
     room.exitsIds = exits;
     dungeonMap.set(id, room);
+    return room;
 }
 
 const addRoomsToExit = (roomId: string, exitId: string) => {
-    let exit: ExitEntity | undefined = exitMap.get(exitId);
-    if(exit === undefined) {
-        return;
-    }
+    let exit: ExitEntity = getExitById(exitId);
     let newRoomIds: string[] = exit.roomIds;
     newRoomIds.push(roomId)
     exit.roomIds = newRoomIds;

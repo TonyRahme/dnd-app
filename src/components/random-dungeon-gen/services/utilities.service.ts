@@ -14,6 +14,32 @@ class Utilities {
         return [entityType, exits];
     }
 
+    static decodeExitRegex = (exitCodes: string[], exitRegex: RegExp): string[] => {
+        let decodedExits: string[] = [];
+        exitCodes.forEach(exitCode => {
+            let exitCodeAmount = this.extractArrayFromRegexMatch(exitCode, exitRegex);
+            console.log("exitMatches", exitCodeAmount);
+            
+            const [code, amount] = exitCodeAmount;
+        
+            switch(amount) {
+                case 'lW':
+                case 'sW':
+                    decodedExits.push(code,code);
+                    break;
+                case 'mW':
+                    decodedExits.push(code);
+                    break;
+                default:
+                    for(let i=0;i<Number(amount);i++) {
+                        decodedExits.push(code);
+                    }
+            }
+        
+        });
+        return decodedExits;
+    }
+
     static isHorizontal = (cardinalName: CardinalDirectionName): boolean => {
         return CardinalDirectionVector2[cardinalName].y === 0;
     }
