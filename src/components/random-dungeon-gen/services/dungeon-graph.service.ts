@@ -143,7 +143,7 @@ const buildRandomChamber = (newId: string, entranceExitId: string): Chamber => {
     }
     let newExitIds =  [entranceExitId , ...buildRandomExits(newId, newChamberTransform, exitCount)];
     newChamber.transform = newChamberTransform;
-    newChamber.exitsIds = newExitIds;
+    newChamber.setExits(newExitIds);
     return newChamber;
 }
 
@@ -383,9 +383,9 @@ const addNewExitsInStartingRoom = (roomId: string, exitCodes: string[]): ExitDTO
     return newStartingExits;
 }
 
-const addExitsToDungeonArea = (exits: string[], id: string): RoomEntity => {
+const addExitsToDungeonArea = (newExitIds: string[], id: string): RoomEntity => {
     let room: RoomEntity = getDungeonAreaById(id);
-    room.exitsIds = exits;
+    room.setExits(newExitIds);
     dungeonMap.set(id, room);
     return room;
 }
@@ -394,7 +394,7 @@ const addRoomsToExit = (roomId: string, exitId: string) => {
     let exit: ExitEntity = getExitById(exitId);
     let newRoomIds: string[] = exit.roomIds;
     newRoomIds.push(roomId)
-    exit.roomIds = newRoomIds;
+    exit.setRooms(newRoomIds);
     exitMap.set(exitId, exit);
 }
 

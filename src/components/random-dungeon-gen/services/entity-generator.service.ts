@@ -92,63 +92,31 @@ class EntityGenerator  {
 
     static genPassageWay = (newId: string, newRoomIds: string[], exit: ExitDTO): PassageWay => {
         //TODO: worry about direction of the passage way facing
+        //TODO if there is no change to lock secret and trap, just pass ExitDTO as param
         const vector2 = new Vector2(0,5);
         const vector3 = new Vector3(exit.position.x, exit.position.y);
-        let newPassageWay: PassageWay = {
-            transform: this.genTransform(vector2, vector3, exit.direction),
-            exitType: ExitType.Passage,
-            id: newId,
-            roomIds: newRoomIds,
-            description: `PassageWay between ${newRoomIds}`,
-        };
-        return newPassageWay;
+        const newTransform = this.genTransform(vector2, vector3, exit.direction); 
+        return new PassageWay(newId, newTransform, exit.exitType, newRoomIds);
     }
 
     static genDoor = (newId: string, newDoorType: DoorType, newRoomIds: string[], exit: ExitDTO): Door => {
+        //TODO if there is no change to lock secret and trap, just pass ExitDTO as param
         const isLocked = exit.isLocked;
         const isTrap = exit.isTrap;
         const isSecret = exit.isSecret;
         const vector2 = new Vector2(0,5);
         const vector3 = new Vector3(exit.position.x, exit.position.y);
-        let newDoor: Door = {
-            transform: this.genTransform(vector2, vector3, exit.direction),
-            exitType: ExitType.Door,
-            id: newId,
-            doorType: newDoorType,
-            isLocked: isLocked,
-            isTrap: isTrap,
-            isSecret: isSecret,
-            roomIds: newRoomIds,
-            description: `Door Type: ${DoorType[newDoorType]},${isLocked?' locked,':''}${isTrap?' trapped,':''}${isSecret?' Secret':''}`
-        }
-        return newDoor;
+        const newTransform = this.genTransform(vector2, vector3, exit.direction); 
+        return new Door(newId, newTransform, newRoomIds, exit.exitType, newDoorType, isLocked, isSecret, isTrap);
     }
 
 
     static genChamber = (newId: string, newTransform: Transform, newShape: RoomShapeType, isLarge: boolean ,newExitsIds: string[] = []): Chamber => {
-        let newChamber: Chamber = {
-            id: newId,
-            transform: newTransform,
-            shape: newShape,
-            isLarge: isLarge,
-            exitsIds: newExitsIds,
-            description: `Chamber, shape:${RoomShapeType[newShape]},`+ 
-            `size: ${isLarge ? RegexDungeonRules.l_LargeChamber : RegexDungeonRules.n_NormalChamber},` + 
-            `dimension: ${newTransform.length}Lx${newTransform.width}W, exits: ${newExitsIds.length}`
-        }
-
-        return newChamber;
+        return new Chamber(newId, newTransform, newShape, isLarge, newExitsIds);
     }
 
     static genPassage = (newId: string, newTransform: Transform, newExitsIds: string[] = []): Passage => {
-        let newPassage: Passage = {
-            id: newId,
-            transform: newTransform,
-            exitsIds: newExitsIds,
-            description: `Passage, width: ${newTransform.width}, exits: ${newExitsIds}`,
-        } 
-        
-        return newPassage;
+        return new Passage(newId, newTransform, newExitsIds);
     }
 
     static genEntityModelReq = (entity: string[], exits: string[] = []): RoomEntityModelRequest => {

@@ -7,9 +7,46 @@ export interface RoomEntityModelRequest {
 }
 
 
-export interface Chamber extends RoomEntity {
+export class Chamber implements RoomEntity {
     shape: RoomShapeType;
     isLarge: boolean;
+    exitsIds: string[];
+    id: string;
+    description: string = '';
+    transform: Transform;
+    
+    public constructor(newId: string, newTransform: Transform, newShape: RoomShapeType, isLarge: boolean, newExitsIds?: string[]) {
+        this.id = newId;
+        this.transform = newTransform;
+        this.shape = newShape;
+        this.isLarge = isLarge;
+        this.exitsIds = newExitsIds || [];
+        this.setDescription();
+
+    }
+    setExits(newExitIds: string[]){
+        this.exitsIds = newExitIds;
+        this.setDescription();
+    }
+    setDescription(): void {
+        this.description = `Chamber, shape:${RoomShapeType[this.shape]},`+ 
+        `${this.getRoomSizeString()},` + 
+        `${this.getDimensionString()}, exits: ${this.exitsIds.length}`
+    }
+    getDescription(): string {
+        return this.description;
+    }
+    getDimensionString(): string {
+        switch(this.shape){
+            case RoomShapeType.Circle:
+                return `radius: ${this.transform.length}`;
+            default:
+                return `dimension: ${this.transform.length}Lx${this.transform.width}W`;
+        }
+    }
+    getRoomSizeString(): string {
+        return `size: ${this.isLarge ? 'Large' : 'Normal'}`;
+    }
 }
 
 export interface ExitDTO {
@@ -23,11 +60,48 @@ export interface ExitDTO {
     toId?: string;
 }
 
-export interface Door extends ExitEntity {
+export class Door implements ExitEntity {
+    id: string;
+    transform: Transform;
+    exitType: ExitType;
     doorType: DoorType;
     isLocked: boolean;
     isSecret: boolean;
     isTrap: boolean;
+    roomIds: string[];
+    description: string = '';
+    
+    constructor(
+        newId: string, newTransform: Transform, newRoomIds: string[],
+        newExitType: ExitType, newDoorType: DoorType, 
+        isLocked: boolean, isSecret: boolean, isTrap: boolean
+        ){
+        this.id = newId;
+        this.transform = newTransform;
+        this.roomIds = newRoomIds;
+        this.exitType = newExitType;
+        this.doorType = newDoorType;
+        this.isLocked = isLocked;
+        this.isSecret = isSecret;
+        this.isTrap = isTrap;
+        this.setDescription();
+    }
+    
+    setRooms(roomIds: string[]): void {
+        this.roomIds = roomIds;
+        this.setDescription();
+    }
+    setDescription(): void {
+        this.description = `Door Type: ${DoorType[this.doorType]},
+        ${this.isLocked?' Locked,':''}${this.isTrap?' Trapped,':''}
+        ${this.isSecret?' Secret':''}`;
+    }
+    getDescription(): string {
+        return this.description;
+    }
+    getDimensionString(): string {
+        return `demension: ${this.transform.width}Wx${this.transform.height}H`;
+    }
 }
 
 export interface Stair extends ExitEntity {
@@ -35,10 +109,62 @@ export interface Stair extends ExitEntity {
     levels: number;
 }
 
-export interface Passage extends RoomEntity {
+export class Passage implements RoomEntity {
+    exitsIds: string[];
+    id: string;
+    description: string = '';
+    transform: Transform;
+    
+    constructor(newId: string, newTransform: Transform, newExitIds?: string[]) {
+        this.id = newId;
+        this.exitsIds = newExitIds || [];
+        this.transform = newTransform;
+        this.setDescription();
+        
+    }
+    setExits(newExitIds: string[]){
+        this.exitsIds = newExitIds;
+        this.setDescription();
+    }
+    setDescription(): void {
+        this.description = `PassageWay between ${this.exitsIds.join(', ')}, ${this.getDimensionString()}`;
+    }
+    getDescription(): string {
+        return this.description;
+    }
+    getDimensionString(): string {
+        return `dimension: ${this.transform.length}Lx${this.transform.width}W`;
+    }
 }
 
-export interface PassageWay extends ExitEntity {
+export class PassageWay implements ExitEntity {
+    exitType: ExitType;
+    roomIds: string[];
+    id: string;
+    description: string = '';
+    transform: Transform;
+    
+    constructor(newId: string, newTransform: Transform, newExitType: ExitType, newRoomIds?: string[]){
+        this.id = newId;
+        this.transform = newTransform;
+        this.exitType = newExitType;
+        this.roomIds = newRoomIds || [];
+        this.setDescription();
+    }
+
+    setRooms(roomIds: string[]): void {
+        this.roomIds = roomIds;
+        this.setDescription();
+    }
+    setDescription(): void {
+        this.description = `Passage between rooms: ${this.roomIds.join(', ')}. ${this.getDimensionString()}`
+    }
+    getDescription(): string {
+        return this.description;
+    }
+    getDimensionString(): string {
+        return `${this.transform.length}Lx${this.transform.width}W`;
+    }
     
 }
 
@@ -123,15 +249,20 @@ export class Vector3 extends Vector2 {
 
 export interface RoomEntity extends DungeonEntity {
     exitsIds: string[];
+    setExits(exitIds: string[]): void;
 }
 
 export interface ExitEntity extends DungeonEntity {
     exitType: ExitType;
     roomIds: string[];
+    setRooms(roomIds: string[]): void;
 }
 
 export interface DungeonEntity {
     id: string;
-    description?: string;
+    description: string;
     transform: Transform;
+    setDescription(): void;
+    getDescription(): string;
+    getDimensionString(): string;
 }
