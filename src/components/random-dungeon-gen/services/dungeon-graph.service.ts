@@ -13,11 +13,12 @@ let exitCount: number = 0;
 const exitsRegex = /(s?[A-Z])|((\d{1,}w?)|[a-z][A-Z])/g
 const chamberRegex = /C[corst]?[nl]?\d{2}(x\d{2})*/g;
 const EntitySplitRegex = /[CDPS][corst]?[ln]?|\d{2}w?(x\d{2})*/g
+let startingArea: RoomEntity;
 
-export const dungeonGenerateGraph = (startingAreaCode: string): RoomEntity => {
-    const startingArea: RoomEntity = generateStartingArea(startingAreaCode);
+export const dungeonGenerateGraph = (startingAreaCode: string, debugStartChamber = false): RoomEntity => {
+    startingArea = generateStartingArea(startingAreaCode);
     exitQueue.push(...startingArea.exitsIds);
-    while (exitQueue.length) {
+    while (exitQueue.length && isDebugStart(debugStartChamber)) {
         let newExit = exitQueue.shift();
         //Debug
         if (newExit !== undefined) {
@@ -30,6 +31,10 @@ export const dungeonGenerateGraph = (startingAreaCode: string): RoomEntity => {
     console.log("exitMap", exitMap);
     return startingArea;
     
+}
+
+const isDebugStart = (condition: boolean): boolean => {
+    return condition ? dungeonMap.size <= startingArea.exitsIds.length : true;
 }
 
 const generateStartingArea = (startingAreaCode: string):RoomEntity => {

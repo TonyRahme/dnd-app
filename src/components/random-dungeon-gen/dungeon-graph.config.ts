@@ -70,6 +70,7 @@ export enum RandomStartingArea {
     Rect80x20PassageEachLongWallDoorsEachShortWall = "Crl80x20PlWDsW",
     Rect20x40PassageEachWall = "Crn20x40P4",
     Circle40PassageEachCardinal = "Ccn40P4",
+    Circle40Door2Test= "Ccn40D2",
     Circle40PassageEachCardinalDoorDown = "Ccn40P4DmW",
     Passage10WideTIntersection = "P10wP2",
     Passage10Wide4Intersection = "P10wP3",

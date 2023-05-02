@@ -1,15 +1,24 @@
 import React, {ReactElement, useEffect, useState} from "react";
 import { createRoot } from 'react-dom/client';
 import { Stage, Layer, Star, Rect, Text, Circle } from 'react-konva';
-import { CardinalDirectionName, Transform, RoomEntity, ExitEntity } from "../random-dungeon-gen/random-dungeon-gen.model";
-import { exitMap } from "../random-dungeon-gen/services/dungeon-graph.service";
+import { CardinalDirectionName, Transform, RoomEntity, ExitEntity, RoomShapeType } from "../random-dungeon-gen/random-dungeon-gen.model";
+import { dungeonMap, exitMap } from "../random-dungeon-gen/services/dungeon-graph.service";
 import EntityGenerator from "../random-dungeon-gen/services/entity-generator.service";
 import { DungeonRenderUI } from "./graph-render.config";
 
 
 const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
+  const [desc, setDesc] = useState(props.startRoom.description);
+  const SCALE = 2;
+  
+  const randomColor = () => {
+    return '#'+(0x1000000+Math.random()*0xffffff).toString(16).substring(1,7);
+  }
 
-  const SCALE = 1;
+  const colors: string[] = [];
+  for(let i = 0; i < dungeonMap.size; i++){
+    colors.push(randomColor());
+  }
   
   let transform = props.startRoom.transform;
   let width = 500;
@@ -18,9 +27,6 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
   let offSetY = -(height - transform.height)/2;
   
 
-  const randomColor = () => {
-    return '#'+(0x1000000+Math.random()*0xffffff).toString(16).substring(1,7);
-  }
 
   const isFacingHorizontal = (direction: CardinalDirectionName): boolean => {
     switch(direction) {
@@ -51,6 +57,13 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
     return roomEntities;
   }
 
+  const handleHoverDescription = (e:any) => {
+    const id = e.target.id();
+      setDesc(
+        dungeonMap.get(id)?.description || ''
+        );
+  };
+
   const getExitsAfterStart = (exitIds: string[]):ExitEntity[] => {
     let exitEntities: ExitEntity[] = [];
     exitIds.forEach(exitId => {
@@ -70,7 +83,7 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
 
   return (
       <div>
-        {props.startRoom.description}
+        {desc}
         <Stage 
          
         width={width} 
@@ -94,7 +107,18 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
             radius={4}
             fill="black"
             /> */}
-            {getAllRooms().map((room) => 
+            {getAllRooms().map((room, idx) => 
+              room.description.includes(RoomShapeType[RoomShapeType.Circle]) ? 
+              (<Circle 
+                key={room.id}
+                id={room.id}
+                x={room.transform.center.x*SCALE}
+                y={room.transform.center.y*SCALE}
+                radius={room.transform.length*SCALE/2}
+                fill={colors[idx]}
+                onMouseEnter={handleHoverDescription}
+              />)
+              :
               (<Rect 
               key={room.id}
               id={room.id}
@@ -102,8 +126,8 @@ const GraphRenderTest = (props: DungeonRenderUI): ReactElement => {
               y={room.transform.position.y*SCALE}
               width={room.transform.length*SCALE}
               height={room.transform.width*SCALE}
-              fill={randomColor()}
-              draggable={true}
+              fill={colors[idx]}
+              onMouseEnter={handleHoverDescription}
               />)
             )}
             {getAllExits().map((exit) => 
