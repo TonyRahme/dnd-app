@@ -1,6 +1,8 @@
 import React, { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Stage, Layer, Rect, Circle, Line, Arrow, Group } from 'react-konva';
 import Konva from 'konva';
+import { Menu, Item, useContextMenu, ItemParams } from 'react-contexify';
+import 'react-contexify/dist/ReactContexify.css';
 import EntityTooltip from './EntityTooltip';
 import { ExitEntity, RoomEntity, Door, Chamber } from './shared/model/dungeon-entity.model';
 import { Vector2 } from './shared/model/Transform';
@@ -8,6 +10,11 @@ import { ExitType, RoomShapeType } from './shared/model/dungeon-type.model';
 
 const SCALE = 2;
 const DEFAULT_HEIGHT = 800;
+const ROOM_MENU_ID = 'dungeon-room-menu';
+
+interface RoomMenuProps {
+  roomId: string;
+}
 
 interface DungeonCanvasProps {
   startRoom: RoomEntity | null;
@@ -52,6 +59,7 @@ const DungeonCanvas = ({
   const [dragOffsets, setDragOffsets] = useState<Map<string, DragOffset>>(new Map());
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const { show: showRoomMenu } = useContextMenu<RoomMenuProps>({ id: ROOM_MENU_ID });
 
   useEffect(() => {
     const onResize = () => setWidth(window.innerWidth);
@@ -107,6 +115,21 @@ const DungeonCanvas = ({
 
   const handleClick = useCallback((roomId: string) => {
     setSelectedRoomId(roomId);
+  }, []);
+
+  const handleRoomContextMenu = useCallback(
+    (roomId: string, e: Konva.KonvaEventObject<PointerEvent>) => {
+      e.evt.preventDefault();
+      setHover(null);
+      showRoomMenu({ event: e.evt, props: { roomId } });
+    },
+    [showRoomMenu],
+  );
+
+  const handleRevealRoom = useCallback(({ props }: ItemParams<RoomMenuProps>) => {
+    if (!props) return;
+    // TODO: hook into DM/player visibility state
+    console.log('reveal room', props.roomId);
   }, []);
 
   // Connector endpoints derive from room.transform.center plus the room's drag offset.
@@ -191,6 +214,7 @@ const DungeonCanvas = ({
                     dash={dash}
                     onMouseEnter={(e) => handleHoverEnter(room, e)}
                     onMouseLeave={handleHoverLeave}
+                    onContextMenu={(e) => handleRoomContextMenu(room.id, e)}
                   />
                 ) : (
                   <Rect
@@ -205,6 +229,7 @@ const DungeonCanvas = ({
                     dash={dash}
                     onMouseEnter={(e) => handleHoverEnter(room, e)}
                     onMouseLeave={handleHoverLeave}
+                    onContextMenu={(e) => handleRoomContextMenu(room.id, e)}
                   />
                 )}
                 {room.exitsIds.map((exitId) => {
@@ -255,6 +280,10 @@ const DungeonCanvas = ({
         description={hover?.description ?? ''}
         isHidden={!showTooltip || !hover}
       />
+
+      <Menu id={ROOM_MENU_ID}>
+        <Item onClick={handleRevealRoom}>Reveal room</Item>
+      </Menu>
     </div>
   );
 };
