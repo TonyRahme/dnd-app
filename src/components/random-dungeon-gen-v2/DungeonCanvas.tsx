@@ -1,0 +1,262 @@
+import React, { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Stage, Layer, Rect, Circle, Line, Arrow, Group } from 'react-konva';
+import Konva from 'konva';
+import EntityTooltip from './EntityTooltip';
+import { ExitEntity, RoomEntity, Door, Chamber } from './shared/model/dungeon-entity.model';
+import { Vector2 } from './shared/model/Transform';
+import { ExitType, RoomShapeType } from './shared/model/dungeon-type.model';
+
+const SCALE = 2;
+const DEFAULT_HEIGHT = 800;
+
+interface DungeonCanvasProps {
+  startRoom: RoomEntity | null;
+  dungeonMap: Map<string, RoomEntity>;
+  exitMap: Map<string, ExitEntity>;
+  colors: string[];
+  showConnectors: boolean;
+  showTooltip: boolean;
+}
+
+interface DragOffset {
+  x: number;
+  y: number;
+}
+
+interface HoverInfo {
+  roomId: string;
+  description: string;
+  position: Vector2;
+}
+
+const isCircleRoom = (room: RoomEntity): boolean => {
+  return (room as Chamber).shape === RoomShapeType.Circle;
+};
+
+const exitFill = (exit: ExitEntity): string => {
+  if (exit.exitType !== ExitType.Door) return 'green';
+  const door = exit as Door;
+  return door.isLocked || door.isSecret || door.isTrap ? 'red' : 'green';
+};
+
+const DungeonCanvas = ({
+  startRoom,
+  dungeonMap,
+  exitMap,
+  colors,
+  showConnectors,
+  showTooltip,
+}: DungeonCanvasProps): ReactElement => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1000);
+  const [dragOffsets, setDragOffsets] = useState<Map<string, DragOffset>>(new Map());
+  const [hover, setHover] = useState<HoverInfo | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Reset per-room drag offsets when a new dungeon arrives
+  useEffect(() => {
+    setDragOffsets(new Map());
+    setSelectedRoomId(startRoom?.id ?? null);
+    setHover(null);
+  }, [startRoom]);
+
+  const rooms = useMemo(() => Array.from(dungeonMap.values()), [dungeonMap]);
+  const exits = useMemo(() => Array.from(exitMap.values()), [exitMap]);
+
+  const stageOffsetX = startRoom ? -width / 2 - startRoom.transform.center.x : 0;
+  const stageOffsetY = startRoom ? -DEFAULT_HEIGHT / 2 - startRoom.transform.center.y : 0;
+
+  const offsetFor = useCallback(
+    (roomId: string): DragOffset => dragOffsets.get(roomId) ?? { x: 0, y: 0 },
+    [dragOffsets],
+  );
+
+  const handleDragMove = useCallback((roomId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+    const node = e.target;
+    setDragOffsets((prev) => {
+      const next = new Map(prev);
+      next.set(roomId, { x: node.x(), y: node.y() });
+      return next;
+    });
+  }, []);
+
+  const handleHoverEnter = useCallback(
+    (room: RoomEntity, e: Konva.KonvaEventObject<MouseEvent>) => {
+      const stage = e.target.getStage();
+      if (!stage) return;
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      setHover({
+        roomId: room.id,
+        description: room.getDescription(),
+        position: { x: pointer.x, y: pointer.y } as Vector2,
+      });
+    },
+    [],
+  );
+
+  const handleHoverLeave = useCallback(() => {
+    setHover(null);
+  }, []);
+
+  const handleClick = useCallback((roomId: string) => {
+    setSelectedRoomId(roomId);
+  }, []);
+
+  // Connector endpoints derive from room.transform.center plus the room's drag offset.
+  const connectorPoints = useCallback(
+    (fromRoomId: string, toRoomId: string): number[] | null => {
+      const fromRoom = dungeonMap.get(fromRoomId);
+      const toRoom = dungeonMap.get(toRoomId);
+      if (!fromRoom || !toRoom) return null;
+      const fromOffset = offsetFor(fromRoomId);
+      const toOffset = offsetFor(toRoomId);
+      const fromCx = fromRoom.transform.center.x * SCALE + fromOffset.x;
+      const fromCy = fromRoom.transform.center.y * SCALE + fromOffset.y;
+      const toCx = toRoom.transform.center.x * SCALE + toOffset.x;
+      const toCy = toRoom.transform.center.y * SCALE + toOffset.y;
+      const dx = toCx - fromCx;
+      const dy = toCy - fromCy;
+      const angle = Math.atan2(-dy, dx);
+      const radius = 5 * SCALE;
+      return [
+        fromCx + -radius * Math.cos(angle + Math.PI),
+        fromCy + radius * Math.sin(angle + Math.PI),
+        toCx + -radius * Math.cos(angle),
+        toCy + radius * Math.sin(angle),
+      ];
+    },
+    [dungeonMap, offsetFor],
+  );
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <Stage
+        width={width}
+        height={DEFAULT_HEIGHT}
+        offsetX={stageOffsetX}
+        offsetY={stageOffsetY}
+        draggable
+        className="border border-dark"
+      >
+        {/* Grid layer */}
+        <Layer listening={false}>
+          <Line
+            points={[0, -DEFAULT_HEIGHT / 2, 0, DEFAULT_HEIGHT / 2]}
+            stroke="black"
+            strokeWidth={5}
+            dash={[25, 10]}
+          />
+          <Line
+            points={[-width / 2, 0, width / 2, 0]}
+            stroke="black"
+            strokeWidth={5}
+            dash={[25, 10]}
+          />
+        </Layer>
+
+        {/* Dungeon layer (rooms + exits per room, draggable as a group) */}
+        <Layer>
+          {rooms.map((room, idx) => {
+            const offset = offsetFor(room.id);
+            const isSelected = selectedRoomId === room.id;
+            const strokeWidth = isSelected ? 5 : 1;
+            const dash = isSelected ? [10, 3] : [];
+            return (
+              <Group
+                key={room.id}
+                id={room.id}
+                draggable
+                x={offset.x}
+                y={offset.y}
+                onDragMove={(e) => handleDragMove(room.id, e)}
+                onClick={() => handleClick(room.id)}
+                onTap={() => handleClick(room.id)}
+              >
+                {isCircleRoom(room) ? (
+                  <Circle
+                    id={room.id}
+                    x={room.transform.center.x * SCALE}
+                    y={room.transform.center.y * SCALE}
+                    radius={(room.transform.dimension.x / 2) * SCALE}
+                    fill={colors[idx]}
+                    stroke="#000"
+                    strokeWidth={strokeWidth}
+                    dash={dash}
+                    onMouseEnter={(e) => handleHoverEnter(room, e)}
+                    onMouseLeave={handleHoverLeave}
+                  />
+                ) : (
+                  <Rect
+                    id={room.id}
+                    x={room.transform.position.x * SCALE}
+                    y={room.transform.position.y * SCALE}
+                    width={room.transform.dimension.x * SCALE}
+                    height={room.transform.dimension.y * SCALE}
+                    fill={colors[idx]}
+                    stroke="#000"
+                    strokeWidth={strokeWidth}
+                    dash={dash}
+                    onMouseEnter={(e) => handleHoverEnter(room, e)}
+                    onMouseLeave={handleHoverLeave}
+                  />
+                )}
+                {room.exitsIds.map((exitId) => {
+                  const exit = exitMap.get(exitId);
+                  if (!exit) return null;
+                  return (
+                    <Circle
+                      key={exitId}
+                      id={exitId}
+                      x={exit.transform.center.x * SCALE}
+                      y={exit.transform.center.y * SCALE}
+                      radius={2.5 * SCALE}
+                      fill={exitFill(exit)}
+                      stroke="#000"
+                      strokeWidth={1}
+                    />
+                  );
+                })}
+              </Group>
+            );
+          })}
+        </Layer>
+
+        {/* Connectors layer */}
+        {showConnectors && (
+          <Layer listening={false}>
+            {exits.map((exit) => {
+              const [from, to] = exit.roomIds;
+              if (!from || !to) return null;
+              const points = connectorPoints(from, to);
+              if (!points) return null;
+              return (
+                <Arrow
+                  key={`connector-${exit.id}`}
+                  points={points}
+                  fill="black"
+                  stroke="black"
+                  strokeWidth={1}
+                />
+              );
+            })}
+          </Layer>
+        )}
+      </Stage>
+
+      <EntityTooltip
+        position={hover?.position ?? null}
+        description={hover?.description ?? ''}
+        isHidden={!showTooltip || !hover}
+      />
+    </div>
+  );
+};
+
+export default DungeonCanvas;
