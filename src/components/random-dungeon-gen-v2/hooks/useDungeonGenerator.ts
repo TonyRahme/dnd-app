@@ -25,7 +25,7 @@ export interface UseDungeonGenerator extends DungeonState {
 }
 
 export const useDungeonGenerator = (): UseDungeonGenerator => {
-  const generatorRef = useRef<DungeonGeneratorService>();
+  const generatorRef = useRef<DungeonGeneratorService | null>(null);
   if (!generatorRef.current) {
     generatorRef.current = new DungeonGeneratorService();
   }
