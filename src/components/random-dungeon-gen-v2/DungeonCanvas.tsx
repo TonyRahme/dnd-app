@@ -1,12 +1,12 @@
 import React, { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Stage, Layer, Rect, Circle, Line, Arrow, Group } from 'react-konva';
+import { Stage, Layer, Line, Arrow } from 'react-konva';
 import Konva from 'konva';
 import { Menu, Item, useContextMenu, ItemParams } from 'react-contexify';
 import 'react-contexify/dist/ReactContexify.css';
 import EntityTooltip from './EntityTooltip';
-import { ExitEntity, RoomEntity, Door, Chamber } from './shared/model/dungeon-entity.model';
+import RoomNode from './RoomNode';
+import { ExitEntity, RoomEntity } from './shared/model/dungeon-entity.model';
 import { Vector2 } from './shared/model/Transform';
-import { ExitType, RoomShapeType } from './shared/model/dungeon-type.model';
 
 const SCALE = 2;
 const DEFAULT_HEIGHT = 800;
@@ -35,16 +35,6 @@ interface HoverInfo {
   description: string;
   position: Vector2;
 }
-
-const isCircleRoom = (room: RoomEntity): boolean => {
-  return (room as Chamber).shape === RoomShapeType.Circle;
-};
-
-const exitFill = (exit: ExitEntity): string => {
-  if (exit.exitType !== ExitType.Door) return 'green';
-  const door = exit as Door;
-  return door.isLocked || door.isSecret || door.isTrap ? 'red' : 'green';
-};
 
 const DungeonCanvas = ({
   startRoom,
@@ -188,67 +178,21 @@ const DungeonCanvas = ({
         <Layer>
           {rooms.map((room, idx) => {
             const offset = offsetFor(room.id);
-            const isSelected = selectedRoomId === room.id;
-            const strokeWidth = isSelected ? 5 : 1;
-            const dash = isSelected ? [10, 3] : [];
             return (
-              <Group
+              <RoomNode
                 key={room.id}
-                id={room.id}
-                draggable
-                x={offset.x}
-                y={offset.y}
-                onDragMove={(e) => handleDragMove(room.id, e)}
-                onClick={() => handleClick(room.id)}
-                onTap={() => handleClick(room.id)}
-              >
-                {isCircleRoom(room) ? (
-                  <Circle
-                    id={room.id}
-                    x={room.transform.center.x * SCALE}
-                    y={room.transform.center.y * SCALE}
-                    radius={(room.transform.dimension.x / 2) * SCALE}
-                    fill={colors[idx]}
-                    stroke="#000"
-                    strokeWidth={strokeWidth}
-                    dash={dash}
-                    onMouseEnter={(e) => handleHoverEnter(room, e)}
-                    onMouseLeave={handleHoverLeave}
-                    onContextMenu={(e) => handleRoomContextMenu(room.id, e)}
-                  />
-                ) : (
-                  <Rect
-                    id={room.id}
-                    x={room.transform.position.x * SCALE}
-                    y={room.transform.position.y * SCALE}
-                    width={room.transform.dimension.x * SCALE}
-                    height={room.transform.dimension.y * SCALE}
-                    fill={colors[idx]}
-                    stroke="#000"
-                    strokeWidth={strokeWidth}
-                    dash={dash}
-                    onMouseEnter={(e) => handleHoverEnter(room, e)}
-                    onMouseLeave={handleHoverLeave}
-                    onContextMenu={(e) => handleRoomContextMenu(room.id, e)}
-                  />
-                )}
-                {room.exitsIds.map((exitId) => {
-                  const exit = exitMap.get(exitId);
-                  if (!exit) return null;
-                  return (
-                    <Circle
-                      key={exitId}
-                      id={exitId}
-                      x={exit.transform.center.x * SCALE}
-                      y={exit.transform.center.y * SCALE}
-                      radius={2.5 * SCALE}
-                      fill={exitFill(exit)}
-                      stroke="#000"
-                      strokeWidth={1}
-                    />
-                  );
-                })}
-              </Group>
+                room={room}
+                exitMap={exitMap}
+                color={colors[idx]}
+                offsetX={offset.x}
+                offsetY={offset.y}
+                isSelected={selectedRoomId === room.id}
+                onDragMove={handleDragMove}
+                onClick={handleClick}
+                onHoverEnter={handleHoverEnter}
+                onHoverLeave={handleHoverLeave}
+                onContextMenu={handleRoomContextMenu}
+              />
             );
           })}
         </Layer>
