@@ -16,18 +16,20 @@ interface RoomMenuProps {
   roomId: string;
 }
 
+interface DragOffset {
+  x: number;
+  y: number;
+}
+
 interface DungeonCanvasProps {
   startRoom: RoomEntity | null;
   dungeonMap: Map<string, RoomEntity>;
   exitMap: Map<string, ExitEntity>;
   colors: string[];
+  dragOffsets: Map<string, DragOffset>;
+  onDragOffset: (roomId: string, offset: DragOffset) => void;
   showConnectors: boolean;
   showTooltip: boolean;
-}
-
-interface DragOffset {
-  x: number;
-  y: number;
 }
 
 interface HoverInfo {
@@ -41,12 +43,13 @@ const DungeonCanvas = ({
   dungeonMap,
   exitMap,
   colors,
+  dragOffsets,
+  onDragOffset,
   showConnectors,
   showTooltip,
 }: DungeonCanvasProps): ReactElement => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1000);
-  const [dragOffsets, setDragOffsets] = useState<Map<string, DragOffset>>(new Map());
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const { show: showRoomMenu } = useContextMenu<RoomMenuProps>({ id: ROOM_MENU_ID });
@@ -57,9 +60,7 @@ const DungeonCanvas = ({
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Reset per-room drag offsets when a new dungeon arrives
   useEffect(() => {
-    setDragOffsets(new Map());
     setSelectedRoomId(startRoom?.id ?? null);
     setHover(null);
   }, [startRoom]);
@@ -75,14 +76,13 @@ const DungeonCanvas = ({
     [dragOffsets],
   );
 
-  const handleDragMove = useCallback((roomId: string, e: Konva.KonvaEventObject<DragEvent>) => {
-    const node = e.target;
-    setDragOffsets((prev) => {
-      const next = new Map(prev);
-      next.set(roomId, { x: node.x(), y: node.y() });
-      return next;
-    });
-  }, []);
+  const handleDragMove = useCallback(
+    (roomId: string, e: Konva.KonvaEventObject<DragEvent>) => {
+      const node = e.target;
+      onDragOffset(roomId, { x: node.x(), y: node.y() });
+    },
+    [onDragOffset],
+  );
 
   const handleHoverEnter = useCallback(
     (room: RoomEntity, e: Konva.KonvaEventObject<MouseEvent>) => {

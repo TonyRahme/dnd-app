@@ -12,16 +12,23 @@ const buildColors = (size: number): string[] => {
   return colors;
 };
 
+export interface DragOffset {
+  x: number;
+  y: number;
+}
+
 export interface DungeonState {
   startRoom: RoomEntity | null;
   dungeonMap: Map<string, RoomEntity>;
   exitMap: Map<string, ExitEntity>;
   colors: string[];
+  dragOffsets: Map<string, DragOffset>;
 }
 
 export interface UseDungeonGenerator extends DungeonState {
   generate: () => void;
   reset: () => void;
+  setDragOffset: (roomId: string, offset: DragOffset) => void;
 }
 
 export const useDungeonGenerator = (): UseDungeonGenerator => {
@@ -35,6 +42,7 @@ export const useDungeonGenerator = (): UseDungeonGenerator => {
     dungeonMap: new Map(),
     exitMap: new Map(),
     colors: [],
+    dragOffsets: new Map(),
   });
 
   const generate = useCallback(() => {
@@ -48,21 +56,25 @@ export const useDungeonGenerator = (): UseDungeonGenerator => {
       dungeonMap,
       exitMap,
       colors: buildColors(dungeonMap.size),
+      dragOffsets: new Map(),
     });
   }, []);
 
   const reset = useCallback(() => {
-    const gen = generatorRef.current!;
-    setState((prev) => ({
-      ...prev,
-      dungeonMap: gen.getDungeonMap(),
-      exitMap: gen.getExitMap(),
-    }));
+    setState((prev) => ({ ...prev, dragOffsets: new Map() }));
+  }, []);
+
+  const setDragOffset = useCallback((roomId: string, offset: DragOffset) => {
+    setState((prev) => {
+      const next = new Map(prev.dragOffsets);
+      next.set(roomId, offset);
+      return { ...prev, dragOffsets: next };
+    });
   }, []);
 
   useEffect(() => {
     generate();
   }, [generate]);
 
-  return { ...state, generate, reset };
+  return { ...state, generate, reset, setDragOffset };
 };

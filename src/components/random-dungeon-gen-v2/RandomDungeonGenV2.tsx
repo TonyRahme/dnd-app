@@ -3,7 +3,8 @@ import DungeonCanvas from './DungeonCanvas';
 import { useDungeonGenerator } from './hooks/useDungeonGenerator';
 
 const RandomDungeonGenV2 = (): ReactElement => {
-  const { startRoom, dungeonMap, exitMap, colors, generate, reset } = useDungeonGenerator();
+  const { startRoom, dungeonMap, exitMap, colors, dragOffsets, generate, reset, setDragOffset } =
+    useDungeonGenerator();
   const [showConnectors, setShowConnectors] = useState<boolean>(false);
   const [showTooltip, setShowTooltip] = useState<boolean>(true);
 
@@ -51,6 +52,8 @@ const RandomDungeonGenV2 = (): ReactElement => {
         dungeonMap={dungeonMap}
         exitMap={exitMap}
         colors={colors}
+        dragOffsets={dragOffsets}
+        onDragOffset={setDragOffset}
         showConnectors={showConnectors}
         showTooltip={showTooltip}
       />
