@@ -73,6 +73,7 @@ const DungeonCanvas = ({
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [stagePos, setStagePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [stageScale, setStageScale] = useState<number>(1);
   const { show: showRoomMenu } = useContextMenu<RoomMenuItemProps>({ id: ROOM_MENU_ID });
 
   useEffect(() => {
@@ -102,6 +103,33 @@ const DungeonCanvas = ({
       setStagePos({ x: e.target.x(), y: e.target.y() });
     }
   }, []);
+
+  // Wheel-zoom anchored on the cursor (clamped 0.2x – 5x). Driving stage
+  // scale + position from React state keeps the grid math in sync.
+  const handleWheel = useCallback(
+    (e: Konva.KonvaEventObject<WheelEvent>) => {
+      e.evt.preventDefault();
+      const stage = e.target.getStage();
+      if (!stage) return;
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      const scaleBy = 1.05;
+      const oldScale = stageScale;
+      const point = {
+        x: (pointer.x - stagePos.x) / oldScale,
+        y: (pointer.y - stagePos.y) / oldScale,
+      };
+      const direction = e.evt.deltaY > 0 ? -1 : 1;
+      const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+      const clamped = Math.max(0.2, Math.min(5, newScale));
+      setStageScale(clamped);
+      setStagePos({
+        x: pointer.x - point.x * clamped,
+        y: pointer.y - point.y * clamped,
+      });
+    },
+    [stageScale, stagePos],
+  );
 
   const handleDragMove = useCallback(
     (roomId: string, e: Konva.KonvaEventObject<DragEvent>) => {
@@ -163,8 +191,13 @@ const DungeonCanvas = ({
         height={DEFAULT_HEIGHT}
         offsetX={stageOffsetX}
         offsetY={stageOffsetY}
+        x={stagePos.x}
+        y={stagePos.y}
+        scaleX={stageScale}
+        scaleY={stageScale}
         draggable
         onDragMove={handleStageDragMove}
+        onWheel={handleWheel}
         className="border border-dark"
       >
         <GridLayer
@@ -174,6 +207,7 @@ const DungeonCanvas = ({
           stageOffsetY={stageOffsetY}
           stageX={stagePos.x}
           stageY={stagePos.y}
+          stageScale={stageScale}
         />
 
         <Layer>

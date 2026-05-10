@@ -11,11 +11,13 @@ interface GridLayerProps {
   /** Stage's current pan position. */
   stageX: number;
   stageY: number;
+  /** Stage's current zoom factor (1 = no zoom). */
+  stageScale: number;
 }
 
 /**
  * Renders an "infinite" grid by computing only the cells visible in the
- * current viewport from the stage's pan + centering offset.
+ * current viewport from the stage's pan, centering offset, and zoom.
  */
 const GridLayer = ({
   width,
@@ -24,12 +26,15 @@ const GridLayer = ({
   stageOffsetY,
   stageX,
   stageY,
+  stageScale,
 }: GridLayerProps): ReactElement => {
   const lines = useMemo(() => {
-    const left = -stageX + stageOffsetX;
-    const top = -stageY + stageOffsetY;
-    const right = left + width;
-    const bottom = top + height;
+    // Konva: screen = (child - offset) * scale + position
+    // Solving for child: child = (screen - position) / scale + offset
+    const left = -stageX / stageScale + stageOffsetX;
+    const top = -stageY / stageScale + stageOffsetY;
+    const right = left + width / stageScale;
+    const bottom = top + height / stageScale;
     const pad = 2 * GRID_CELL;
     const startX = Math.floor((left - pad) / GRID_CELL) * GRID_CELL;
     const endX = Math.ceil((right + pad) / GRID_CELL) * GRID_CELL;
@@ -61,7 +66,7 @@ const GridLayer = ({
       );
     }
     return out;
-  }, [width, height, stageOffsetX, stageOffsetY, stageX, stageY]);
+  }, [width, height, stageOffsetX, stageOffsetY, stageX, stageY, stageScale]);
 
   return <Layer listening={false}>{lines}</Layer>;
 };

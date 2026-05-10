@@ -4,6 +4,7 @@ import Konva from 'konva';
 import { ExitEntity, RoomEntity, Door, Chamber } from '../shared/model/dungeon-entity.model';
 import { ExitType, RoomShapeType } from '../shared/model/dungeon-type.model';
 import { SCALE } from './constants';
+import RoomGrid from './RoomGrid';
 
 const isCircleRoom = (room: RoomEntity): boolean =>
   (room as Chamber).shape === RoomShapeType.Circle;
@@ -89,6 +90,7 @@ const RoomNode = ({
           height={room.transform.dimension.y * SCALE}
         />
       )}
+      <RoomGrid room={room} />
       {room.exitsIds.map((exitId) => {
         const exit = exitMap.get(exitId);
         if (!exit) return null;
