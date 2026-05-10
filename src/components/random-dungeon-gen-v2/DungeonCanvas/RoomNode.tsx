@@ -1,10 +1,9 @@
 import { ReactElement } from 'react';
 import { Group, Circle, Rect, Text } from 'react-konva';
 import Konva from 'konva';
-import { ExitEntity, RoomEntity, Door, Chamber } from './shared/model/dungeon-entity.model';
-import { ExitType, RoomShapeType } from './shared/model/dungeon-type.model';
-
-const SCALE = 2;
+import { ExitEntity, RoomEntity, Door, Chamber } from '../shared/model/dungeon-entity.model';
+import { ExitType, RoomShapeType } from '../shared/model/dungeon-type.model';
+import { SCALE } from './constants';
 
 const isCircleRoom = (room: RoomEntity): boolean =>
   (room as Chamber).shape === RoomShapeType.Circle;

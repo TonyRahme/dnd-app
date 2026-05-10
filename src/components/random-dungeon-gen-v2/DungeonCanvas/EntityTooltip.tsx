@@ -1,5 +1,5 @@
-import React, { ReactElement, useMemo } from 'react';
-import { Vector2 } from './shared/model/Transform';
+import { ReactElement, useMemo } from 'react';
+import { Vector2 } from '../shared/model/Transform';
 
 interface EntityTooltipProps {
   position: Vector2 | null;

@@ -1,17 +1,16 @@
-import React, { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Stage, Layer, Line, Arrow } from 'react-konva';
+import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Stage, Layer } from 'react-konva';
 import Konva from 'konva';
-import { Menu, Item, useContextMenu, ItemParams, BooleanPredicate } from 'react-contexify';
-import 'react-contexify/dist/ReactContexify.css';
+import { useContextMenu } from 'react-contexify';
 import EntityTooltip from './EntityTooltip';
 import RoomNode from './RoomNode';
-import { ExitEntity, RoomEntity, Door } from './shared/model/dungeon-entity.model';
-import { ExitType, DoorType } from './shared/model/dungeon-type.model';
-import { Vector2 } from './shared/model/Transform';
-
-const SCALE = 2;
-const DEFAULT_HEIGHT = 800;
-const ROOM_MENU_ID = 'dungeon-room-menu';
+import GridLayer from './GridLayer';
+import ConnectorsLayer from './ConnectorsLayer';
+import RoomMenu, { ROOM_MENU_ID, RoomMenuItemProps } from './RoomMenu';
+import { ExitEntity, RoomEntity, Door } from '../shared/model/dungeon-entity.model';
+import { ExitType, DoorType } from '../shared/model/dungeon-type.model';
+import { Vector2 } from '../shared/model/Transform';
+import { DEFAULT_HEIGHT } from './constants';
 
 // Format an exit's properties as comma-separated key:value pairs so the
 // EntityTooltip's regex parser can render each on its own line.
@@ -30,10 +29,6 @@ const formatExitDescription = (exit: ExitEntity): string => {
   }
   return props.join(', ');
 };
-
-interface RoomMenuProps {
-  roomId: string;
-}
 
 interface DragOffset {
   x: number;
@@ -55,7 +50,7 @@ interface DungeonCanvasProps {
 }
 
 interface HoverInfo {
-  roomId: string;
+  entityId: string;
   description: string;
   position: Vector2;
 }
@@ -77,7 +72,8 @@ const DungeonCanvas = ({
   const [width, setWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1000);
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
-  const { show: showRoomMenu } = useContextMenu<RoomMenuProps>({ id: ROOM_MENU_ID });
+  const [stagePos, setStagePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const { show: showRoomMenu } = useContextMenu<RoomMenuItemProps>({ id: ROOM_MENU_ID });
 
   useEffect(() => {
     const onResize = () => setWidth(window.innerWidth);
@@ -101,6 +97,12 @@ const DungeonCanvas = ({
     [dragOffsets],
   );
 
+  const handleStageDragMove = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    if (e.target === e.currentTarget) {
+      setStagePos({ x: e.target.x(), y: e.target.y() });
+    }
+  }, []);
+
   const handleDragMove = useCallback(
     (roomId: string, e: Konva.KonvaEventObject<DragEvent>) => {
       const node = e.target;
@@ -111,13 +113,11 @@ const DungeonCanvas = ({
 
   // Anchor the tooltip to the top-center of the hovered shape, in stage-container
   // pixel coords, so it renders directly above the chamber without covering it.
-  // No `relativeTo` here: that returns local stage coords (which include the stage
-  // offset/pan and would push the tooltip outside the map).
   const showHoverFor = useCallback(
     (entityId: string, description: string, e: Konva.KonvaEventObject<MouseEvent>) => {
       const rect = e.target.getClientRect();
       setHover({
-        roomId: entityId,
+        entityId,
         description,
         position: { x: rect.x + rect.width / 2, y: rect.y } as Vector2,
       });
@@ -156,40 +156,6 @@ const DungeonCanvas = ({
     [showRoomMenu],
   );
 
-  const handleRevealRoom = useCallback(
-    ({ props }: ItemParams<RoomMenuProps>) => {
-      if (!props) return;
-      onToggleReveal(props.roomId);
-    },
-    [onToggleReveal],
-  );
-
-  // Connector endpoints derive from room.transform.center plus the room's drag offset.
-  const connectorPoints = useCallback(
-    (fromRoomId: string, toRoomId: string): number[] | null => {
-      const fromRoom = dungeonMap.get(fromRoomId);
-      const toRoom = dungeonMap.get(toRoomId);
-      if (!fromRoom || !toRoom) return null;
-      const fromOffset = offsetFor(fromRoomId);
-      const toOffset = offsetFor(toRoomId);
-      const fromCx = fromRoom.transform.center.x * SCALE + fromOffset.x;
-      const fromCy = fromRoom.transform.center.y * SCALE + fromOffset.y;
-      const toCx = toRoom.transform.center.x * SCALE + toOffset.x;
-      const toCy = toRoom.transform.center.y * SCALE + toOffset.y;
-      const dx = toCx - fromCx;
-      const dy = toCy - fromCy;
-      const angle = Math.atan2(-dy, dx);
-      const radius = 5 * SCALE;
-      return [
-        fromCx + -radius * Math.cos(angle + Math.PI),
-        fromCy + radius * Math.sin(angle + Math.PI),
-        toCx + -radius * Math.cos(angle),
-        toCy + radius * Math.sin(angle),
-      ];
-    },
-    [dungeonMap, offsetFor],
-  );
-
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
       <Stage
@@ -198,25 +164,18 @@ const DungeonCanvas = ({
         offsetX={stageOffsetX}
         offsetY={stageOffsetY}
         draggable
+        onDragMove={handleStageDragMove}
         className="border border-dark"
       >
-        {/* Grid layer */}
-        <Layer listening={false}>
-          <Line
-            points={[0, -DEFAULT_HEIGHT / 2, 0, DEFAULT_HEIGHT / 2]}
-            stroke="black"
-            strokeWidth={5}
-            dash={[25, 10]}
-          />
-          <Line
-            points={[-width / 2, 0, width / 2, 0]}
-            stroke="black"
-            strokeWidth={5}
-            dash={[25, 10]}
-          />
-        </Layer>
+        <GridLayer
+          width={width}
+          height={DEFAULT_HEIGHT}
+          stageOffsetX={stageOffsetX}
+          stageOffsetY={stageOffsetY}
+          stageX={stagePos.x}
+          stageY={stagePos.y}
+        />
 
-        {/* Dungeon layer (rooms + exits per room, draggable as a group) */}
         <Layer>
           {rooms.map((room, idx) => {
             const offset = offsetFor(room.id);
@@ -242,25 +201,8 @@ const DungeonCanvas = ({
           })}
         </Layer>
 
-        {/* Connectors layer */}
         {showConnectors && (
-          <Layer listening={false}>
-            {exits.map((exit) => {
-              const [from, to] = exit.roomIds;
-              if (!from || !to) return null;
-              const points = connectorPoints(from, to);
-              if (!points) return null;
-              return (
-                <Arrow
-                  key={`connector-${exit.id}`}
-                  points={points}
-                  fill="black"
-                  stroke="black"
-                  strokeWidth={1}
-                />
-              );
-            })}
-          </Layer>
+          <ConnectorsLayer exits={exits} dungeonMap={dungeonMap} dragOffsets={dragOffsets} />
         )}
       </Stage>
 
@@ -270,26 +212,11 @@ const DungeonCanvas = ({
         isHidden={!showTooltip || !hover}
       />
 
-      <Menu id={ROOM_MENU_ID}>
-        <Item
-          onClick={handleRevealRoom}
-          hidden={
-            (({ props }) =>
-              !crawlMode || !props || revealedRoomIds.has((props as RoomMenuProps).roomId)) as BooleanPredicate
-          }
-        >
-          Reveal room
-        </Item>
-        <Item
-          onClick={handleRevealRoom}
-          hidden={
-            (({ props }) =>
-              !crawlMode || !props || !revealedRoomIds.has((props as RoomMenuProps).roomId)) as BooleanPredicate
-          }
-        >
-          Hide room
-        </Item>
-      </Menu>
+      <RoomMenu
+        crawlMode={crawlMode}
+        revealedRoomIds={revealedRoomIds}
+        onToggleReveal={onToggleReveal}
+      />
     </div>
   );
 };
