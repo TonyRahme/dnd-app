@@ -1,5 +1,6 @@
 import { head, tail, get, set } from 'lodash-es';
 import { CardinalDirectionName, CardinalDirectionVector2, RotateDirection, Transform, Vector2, Vector3 } from "../model/Transform";
+import { RoomShapeType } from "../model/dungeon-type.model";
 
 export class UtilitiesService {
 
@@ -120,7 +121,8 @@ export class UtilitiesService {
       }
   }
 
-  static buildExitsInRoom(roomTransform: Transform, exitCount: number): Vector2[] {
+  static buildExitsInRoom(roomTransform: Transform, exitCount: number, shape?: RoomShapeType): Vector2[] {
+    const isCircle = shape === RoomShapeType.Circle;
     const roundToFive = (num: number) => Math.round(num / 5) * 5;
       let directionVector = CardinalDirectionVector2[roomTransform.direction];
 
@@ -130,18 +132,30 @@ export class UtilitiesService {
 
       let exitPositions: Vector2[] = [];
 
+      // For circles, use a single radius (dimension.x/2) for both axes so the
+      // exit lands on the actual circumference, and skip the 5-unit rounding
+      // that would otherwise pull it off-circle.
+      const halfX = isCircle ? roomTransform.dimension.x/2 : roomTransform.dimension.x/2;
+      const halfY = isCircle ? roomTransform.dimension.x/2 : roomTransform.dimension.y/2;
+
       for(let i = 0;i<exitCount;i++){
           deltaRadian += radianDelta;
           deltaRadian += Math.random()*Math.PI/4
+          const cx = Math.cos(deltaRadian) * halfX + roomTransform.center.x;
+          const cy = Math.sin(deltaRadian) * halfY + roomTransform.center.y;
           exitPositions.push({
-              x: roundToFive(Number(Math.cos(deltaRadian).toFixed(2))*(roomTransform.dimension.x/2) + roomTransform.center.x),
-              y: roundToFive(Number(Math.sin(deltaRadian).toFixed(2))*(roomTransform.dimension.y/2) + roomTransform.center.y),
+              x: isCircle ? cx : roundToFive(Number(Math.cos(deltaRadian).toFixed(2))*halfX + roomTransform.center.x),
+              y: isCircle ? cy : roundToFive(Number(Math.sin(deltaRadian).toFixed(2))*halfY + roomTransform.center.y),
           });
       }
       return exitPositions;
   }
 
-  static fixExitToRoomWall(exitPosition: Vector2, exitDirection: CardinalDirectionName, newRoomTransform: Transform): Vector2 {
+  static fixExitToRoomWall(exitPosition: Vector2, exitDirection: CardinalDirectionName, newRoomTransform: Transform, shape?: RoomShapeType): Vector2 {
+      // Circles already have exits on the circumference from buildExitsInRoom;
+      // snapping to the bounding rect's wall would push them off-circle.
+      if (shape === RoomShapeType.Circle) return exitPosition;
+
       const topLeftCorner = newRoomTransform.position;
       const bottomRightCorner = new Vector3(
           newRoomTransform.position.x+newRoomTransform.dimension.x,

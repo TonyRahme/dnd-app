@@ -1,5 +1,5 @@
 import { cloneDeep, remove } from 'lodash-es';
-import { DoorType, ErrorType, ExitType } from '../model/dungeon-type.model';
+import { DoorType, ErrorType, ExitType, RoomShapeType } from '../model/dungeon-type.model';
 import { CardinalDirectionName, Transform, Vector2, Vector3 } from "../model/Transform";
 import { RoomEntityModelRequest } from "../model/dungeon-entity.model";
 import { Chamber, Door, ExitDTO, Passage, PassageWay } from "../model/dungeon-entity.model";
@@ -101,7 +101,7 @@ export class DungeonGeneratorService {
       const newRoom: RoomEntity = start as RoomEntity;
       this.addDungeonArea(newRoom);
       const newExitDTOs = this.generateStartingExitDTOs(newRoom.id, entityModel.exits);
-      this.buildStartingExitEntities(newRoom.id, newExitDTOs);
+      this.buildStartingExitEntities(newRoom.id, newExitDTOs, (newRoom as Chamber).shape);
       const newExitIds = newExitDTOs.map(exit => exit.exitId || "");
       start = this.addExitsToDungeonArea(newExitIds, newRoom.id) as RoomEntity;
     }
@@ -126,7 +126,7 @@ export class DungeonGeneratorService {
     return exitDTOs;
   };
 
-  public buildStartingExitEntities = (roomId: string, exits: ExitDTO[]) => {
+  public buildStartingExitEntities = (roomId: string, exits: ExitDTO[], shape?: RoomShapeType) => {
     exits.forEach(exit => {
       switch (exit.exitType) {
         case ExitType.Passage:
@@ -139,10 +139,11 @@ export class DungeonGeneratorService {
           this.buildStartingDoor(roomId, exit);
           break;
       }
+      this.fixCircleExitCenter(exit, shape);
     });
   };
 
-  public buildRandomExitEntities = (roomId: string, exits: ExitDTO[]) => {
+  public buildRandomExitEntities = (roomId: string, exits: ExitDTO[], shape?: RoomShapeType) => {
     exits.forEach(exit => {
       switch (exit.exitType) {
         case ExitType.Passage:
@@ -155,7 +156,19 @@ export class DungeonGeneratorService {
           this.buildRandomDoor(roomId, exit);
           break;
       }
+      this.fixCircleExitCenter(exit, shape);
     });
+  };
+
+  // EntityGeneratorService.genTransform offsets the exit's center from its
+  // position by half the door's perpendicular thickness — correct for doors
+  // against straight rect walls, wrong for circles where we want the rendered
+  // dot exactly at the parametric circumference point.
+  private fixCircleExitCenter = (exit: ExitDTO, shape?: RoomShapeType): void => {
+    if (shape !== RoomShapeType.Circle || !exit.exitId) return;
+    const entity = this.exitMap.get(exit.exitId);
+    if (!entity) return;
+    entity.transform.center = { x: exit.position.x, y: exit.position.y } as Vector2;
   };
 
   public buildStartChamber = (newId: string, entityModel: RoomEntityModelRequest): Chamber => {
@@ -191,7 +204,7 @@ export class DungeonGeneratorService {
     if (this.dungeonMap.size > this.MAX_DUNGEON_SIZE) {
       exitCount = 0;
     }
-    let newExitIds = [entranceExitId, ...this.buildRandomExits(newId, newChamberTransform, exitCount)];
+    let newExitIds = [entranceExitId, ...this.buildRandomExits(newId, newChamberTransform, exitCount, newChamber.shape)];
     newChamber.transform = newChamberTransform;
     newChamber.setExits(newExitIds);
     return newChamber;
@@ -272,19 +285,19 @@ export class DungeonGeneratorService {
     this.addExitPoint(newDoor);
   };
 
-  public buildRandomExits = (newRoomId: string, newRoomTransform: Transform, exitCount: number): string[] => {
+  public buildRandomExits = (newRoomId: string, newRoomTransform: Transform, exitCount: number, shape?: RoomShapeType): string[] => {
     let exits: ExitDTO[] = [];
 
-    let exitPositions: Vector2[] = UtilitiesService.buildExitsInRoom(newRoomTransform, exitCount);
+    let exitPositions: Vector2[] = UtilitiesService.buildExitsInRoom(newRoomTransform, exitCount, shape);
     exitPositions.forEach(exitPosition => {
       let exitCode = weightedRandom(randomExitTypeOptions);
       let exitId = this.generateExitId(exitCode);
       let exitType = this.getExitTypeByCode(exitCode);
       let exitDirection = UtilitiesService.getRelativeDirection(exitPosition, newRoomTransform);
-      let fixedExitPosition = UtilitiesService.fixExitToRoomWall(exitPosition, exitDirection, newRoomTransform);
+      let fixedExitPosition = UtilitiesService.fixExitToRoomWall(exitPosition, exitDirection, newRoomTransform, shape);
       exits.push(EntityGeneratorService.genExit(exitId, exitType, fixedExitPosition, exitDirection));
     });
-    this.buildRandomExitEntities(newRoomId, exits);
+    this.buildRandomExitEntities(newRoomId, exits, shape);
     return exits.map(exit => exit.exitId || "");
   };
 
@@ -377,19 +390,21 @@ export class DungeonGeneratorService {
     let amount = exitCodes.length;
     let newStartingExits: ExitDTO[] = [];
 
-    let roomTransform = this.getDungeonAreaById(roomId).transform;
+    const room = this.getDungeonAreaById(roomId);
+    let roomTransform = room?.transform;
     if (!roomTransform) {
       return [];
     }
+    const shape: RoomShapeType | undefined = (room as Chamber).shape;
 
-    let exitPositions: Vector2[] = UtilitiesService.buildExitsInRoom(roomTransform, amount);
+    let exitPositions: Vector2[] = UtilitiesService.buildExitsInRoom(roomTransform, amount, shape);
     for (let i = 0; i < amount; i++) {
       let exitCode = exitCodes[i];
       let exitType = this.getExitTypeByCode(exitCode);
       let exitId = this.generateExitId(exitCode);
       let isSecret = exitCode === RegexDungeonRules.sD_SecretDoor;
       let direction = UtilitiesService.getRelativeDirection(exitPositions[i], roomTransform);
-      let fixedExitPosition = UtilitiesService.fixExitToRoomWall(exitPositions[i], direction, roomTransform);
+      let fixedExitPosition = UtilitiesService.fixExitToRoomWall(exitPositions[i], direction, roomTransform, shape);
       newStartingExits.push(EntityGeneratorService.genExit(exitId, exitType, fixedExitPosition, direction, isSecret));
     }
     return newStartingExits;
