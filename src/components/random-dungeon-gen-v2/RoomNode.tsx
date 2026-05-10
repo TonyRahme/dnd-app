@@ -27,6 +27,8 @@ interface RoomNodeProps {
   onClick: (roomId: string) => void;
   onHoverEnter: (room: RoomEntity, e: Konva.KonvaEventObject<MouseEvent>) => void;
   onHoverLeave: () => void;
+  onExitHoverEnter: (exit: ExitEntity, e: Konva.KonvaEventObject<MouseEvent>) => void;
+  onExitHoverLeave: () => void;
   onContextMenu: (roomId: string, e: Konva.KonvaEventObject<PointerEvent>) => void;
 }
 
@@ -42,6 +44,8 @@ const RoomNode = ({
   onClick,
   onHoverEnter,
   onHoverLeave,
+  onExitHoverEnter,
+  onExitHoverLeave,
   onContextMenu,
 }: RoomNodeProps): ReactElement => {
   const strokeWidth = isSelected ? 5 : 1;
@@ -99,6 +103,8 @@ const RoomNode = ({
             fill={exitFill(exit)}
             stroke="#000"
             strokeWidth={1}
+            onMouseEnter={(e) => onExitHoverEnter(exit, e)}
+            onMouseLeave={onExitHoverLeave}
           />
         );
       })}

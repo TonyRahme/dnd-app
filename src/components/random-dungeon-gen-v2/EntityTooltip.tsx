@@ -21,8 +21,9 @@ const EntityTooltip = ({ position, description, isHidden }: EntityTooltipProps):
     <div
       style={{
         position: 'absolute',
-        top: position.y - 100,
+        top: position.y,
         left: position.x,
+        transform: 'translate(-50%, calc(-100% - 8px))',
         padding: '10px',
         borderRadius: '3px',
         boxShadow: '0 0 5px grey',
@@ -30,6 +31,7 @@ const EntityTooltip = ({ position, description, isHidden }: EntityTooltipProps):
         backgroundColor: 'white',
         pointerEvents: 'none',
         fontSize: '12px',
+        whiteSpace: 'nowrap',
       }}
     >
       <ol style={{ listStyleType: 'none', paddingLeft: 0, margin: 0 }}>

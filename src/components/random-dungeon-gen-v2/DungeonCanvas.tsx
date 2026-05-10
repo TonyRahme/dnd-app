@@ -5,12 +5,31 @@ import { Menu, Item, useContextMenu, ItemParams, BooleanPredicate } from 'react-
 import 'react-contexify/dist/ReactContexify.css';
 import EntityTooltip from './EntityTooltip';
 import RoomNode from './RoomNode';
-import { ExitEntity, RoomEntity } from './shared/model/dungeon-entity.model';
+import { ExitEntity, RoomEntity, Door } from './shared/model/dungeon-entity.model';
+import { ExitType, DoorType } from './shared/model/dungeon-type.model';
 import { Vector2 } from './shared/model/Transform';
 
 const SCALE = 2;
 const DEFAULT_HEIGHT = 800;
 const ROOM_MENU_ID = 'dungeon-room-menu';
+
+// Format an exit's properties as comma-separated key:value pairs so the
+// EntityTooltip's regex parser can render each on its own line.
+const formatExitDescription = (exit: ExitEntity): string => {
+  const props: string[] = [];
+  if (exit.exitType === ExitType.Door) {
+    const door = exit as Door;
+    props.push(`Type: Door (${DoorType[door.doorType]})`);
+    props.push(`Connects: ${exit.roomIds.join(' & ')}`);
+    props.push(`Locked: ${door.isLocked ? 'Yes' : 'No'}`);
+    props.push(`Secret: ${door.isSecret ? 'Yes' : 'No'}`);
+    props.push(`Trapped: ${door.isTrap ? 'Yes' : 'No'}`);
+  } else {
+    props.push(`Type: ${ExitType[exit.exitType]}`);
+    props.push(`Connects: ${exit.roomIds.join(' & ')}`);
+  }
+  return props.join(', ');
+};
 
 interface RoomMenuProps {
   roomId: string;
@@ -90,19 +109,34 @@ const DungeonCanvas = ({
     [onDragOffset],
   );
 
-  const handleHoverEnter = useCallback(
-    (room: RoomEntity, e: Konva.KonvaEventObject<MouseEvent>) => {
-      const stage = e.target.getStage();
-      if (!stage) return;
-      const pointer = stage.getPointerPosition();
-      if (!pointer) return;
+  // Anchor the tooltip to the top-center of the hovered shape, in stage-container
+  // pixel coords, so it renders directly above the chamber without covering it.
+  // No `relativeTo` here: that returns local stage coords (which include the stage
+  // offset/pan and would push the tooltip outside the map).
+  const showHoverFor = useCallback(
+    (entityId: string, description: string, e: Konva.KonvaEventObject<MouseEvent>) => {
+      const rect = e.target.getClientRect();
       setHover({
-        roomId: room.id,
-        description: room.getDescription(),
-        position: { x: pointer.x, y: pointer.y } as Vector2,
+        roomId: entityId,
+        description,
+        position: { x: rect.x + rect.width / 2, y: rect.y } as Vector2,
       });
     },
     [],
+  );
+
+  const handleHoverEnter = useCallback(
+    (room: RoomEntity, e: Konva.KonvaEventObject<MouseEvent>) => {
+      showHoverFor(room.id, room.getDescription(), e);
+    },
+    [showHoverFor],
+  );
+
+  const handleExitHoverEnter = useCallback(
+    (exit: ExitEntity, e: Konva.KonvaEventObject<MouseEvent>) => {
+      showHoverFor(exit.id, formatExitDescription(exit), e);
+    },
+    [showHoverFor],
   );
 
   const handleHoverLeave = useCallback(() => {
@@ -200,6 +234,8 @@ const DungeonCanvas = ({
                 onClick={handleClick}
                 onHoverEnter={handleHoverEnter}
                 onHoverLeave={handleHoverLeave}
+                onExitHoverEnter={handleExitHoverEnter}
+                onExitHoverLeave={handleHoverLeave}
                 onContextMenu={handleRoomContextMenu}
               />
             );
