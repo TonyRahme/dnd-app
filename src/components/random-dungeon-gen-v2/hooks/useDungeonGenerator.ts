@@ -8,6 +8,7 @@ import {
   DungeonSnapshot,
   PLAYER_HEARTBEAT_TIMEOUT_MS,
 } from '../shared/dungeon.broadcast';
+import { deserializeDungeon, DungeonSaveFile } from '../shared/dungeon.io';
 
 const randomColor = (): string =>
   '#' + (0x1000000 + Math.random() * 0xffffff).toString(16).substring(1, 7);
@@ -39,6 +40,7 @@ export interface UseDungeonGenerator extends DungeonState {
   setDragOffset: (roomId: string, offset: DragOffset) => void;
   toggleRoomReveal: (roomId: string) => void;
   setCrawlMode: (on: boolean) => void;
+  loadDungeon: (file: DungeonSaveFile) => void;
 }
 
 const buildSnapshot = (state: DungeonState): DungeonSnapshot => ({
@@ -119,6 +121,19 @@ export const useDungeonGenerator = (): UseDungeonGenerator => {
     }));
   }, []);
 
+  const loadDungeon = useCallback((file: DungeonSaveFile) => {
+    const loaded = deserializeDungeon(file);
+    setState({
+      startRoom: loaded.startRoom,
+      dungeonMap: loaded.dungeonMap,
+      exitMap: loaded.exitMap,
+      colors: loaded.colors,
+      dragOffsets: loaded.dragOffsets,
+      revealedRoomIds: new Set(),
+      crawlMode: false,
+    });
+  }, []);
+
   useEffect(() => {
     generate();
   }, [generate]);
@@ -172,5 +187,5 @@ export const useDungeonGenerator = (): UseDungeonGenerator => {
     [],
   );
 
-  return { ...state, generate, reset, setDragOffset, toggleRoomReveal, setCrawlMode };
+  return { ...state, generate, reset, setDragOffset, toggleRoomReveal, setCrawlMode, loadDungeon };
 };
