@@ -1,5 +1,5 @@
 import { ReactElement } from 'react';
-import { Group, Circle, Rect } from 'react-konva';
+import { Group, Circle, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { ExitEntity, RoomEntity, Door, Chamber } from './shared/model/dungeon-entity.model';
 import { ExitType, RoomShapeType } from './shared/model/dungeon-type.model';
@@ -22,6 +22,7 @@ interface RoomNodeProps {
   offsetX: number;
   offsetY: number;
   isSelected: boolean;
+  showHiddenIndicator?: boolean;
   onDragMove: (roomId: string, e: Konva.KonvaEventObject<DragEvent>) => void;
   onClick: (roomId: string) => void;
   onHoverEnter: (room: RoomEntity, e: Konva.KonvaEventObject<MouseEvent>) => void;
@@ -36,6 +37,7 @@ const RoomNode = ({
   offsetX,
   offsetY,
   isSelected,
+  showHiddenIndicator = false,
   onDragMove,
   onClick,
   onHoverEnter,
@@ -44,6 +46,8 @@ const RoomNode = ({
 }: RoomNodeProps): ReactElement => {
   const strokeWidth = isSelected ? 5 : 1;
   const dash = isSelected ? [10, 3] : [];
+  const centerX = room.transform.center.x * SCALE;
+  const centerY = room.transform.center.y * SCALE;
 
   const sharedShapeProps = {
     id: room.id,
@@ -98,6 +102,19 @@ const RoomNode = ({
           />
         );
       })}
+      {showHiddenIndicator && (
+        <Text
+          x={centerX - 10}
+          y={centerY - 14}
+          text="?"
+          fontSize={28}
+          fontStyle="bold"
+          fill="#fff"
+          stroke="#000"
+          strokeWidth={1}
+          listening={false}
+        />
+      )}
     </Group>
   );
 };

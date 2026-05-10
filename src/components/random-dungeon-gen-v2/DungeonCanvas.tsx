@@ -1,7 +1,7 @@
 import React, { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Stage, Layer, Line, Arrow } from 'react-konva';
 import Konva from 'konva';
-import { Menu, Item, useContextMenu, ItemParams } from 'react-contexify';
+import { Menu, Item, useContextMenu, ItemParams, BooleanPredicate } from 'react-contexify';
 import 'react-contexify/dist/ReactContexify.css';
 import EntityTooltip from './EntityTooltip';
 import RoomNode from './RoomNode';
@@ -28,6 +28,9 @@ interface DungeonCanvasProps {
   colors: string[];
   dragOffsets: Map<string, DragOffset>;
   onDragOffset: (roomId: string, offset: DragOffset) => void;
+  revealedRoomIds: Set<string>;
+  crawlMode: boolean;
+  onToggleReveal: (roomId: string) => void;
   showConnectors: boolean;
   showTooltip: boolean;
 }
@@ -45,6 +48,9 @@ const DungeonCanvas = ({
   colors,
   dragOffsets,
   onDragOffset,
+  revealedRoomIds,
+  crawlMode,
+  onToggleReveal,
   showConnectors,
   showTooltip,
 }: DungeonCanvasProps): ReactElement => {
@@ -116,11 +122,13 @@ const DungeonCanvas = ({
     [showRoomMenu],
   );
 
-  const handleRevealRoom = useCallback(({ props }: ItemParams<RoomMenuProps>) => {
-    if (!props) return;
-    // TODO: hook into DM/player visibility state
-    console.log('reveal room', props.roomId);
-  }, []);
+  const handleRevealRoom = useCallback(
+    ({ props }: ItemParams<RoomMenuProps>) => {
+      if (!props) return;
+      onToggleReveal(props.roomId);
+    },
+    [onToggleReveal],
+  );
 
   // Connector endpoints derive from room.transform.center plus the room's drag offset.
   const connectorPoints = useCallback(
@@ -187,6 +195,7 @@ const DungeonCanvas = ({
                 offsetX={offset.x}
                 offsetY={offset.y}
                 isSelected={selectedRoomId === room.id}
+                showHiddenIndicator={crawlMode && !revealedRoomIds.has(room.id)}
                 onDragMove={handleDragMove}
                 onClick={handleClick}
                 onHoverEnter={handleHoverEnter}
@@ -226,7 +235,24 @@ const DungeonCanvas = ({
       />
 
       <Menu id={ROOM_MENU_ID}>
-        <Item onClick={handleRevealRoom}>Reveal room</Item>
+        <Item
+          onClick={handleRevealRoom}
+          hidden={
+            (({ props }) =>
+              !crawlMode || !props || revealedRoomIds.has((props as RoomMenuProps).roomId)) as BooleanPredicate
+          }
+        >
+          Reveal room
+        </Item>
+        <Item
+          onClick={handleRevealRoom}
+          hidden={
+            (({ props }) =>
+              !crawlMode || !props || !revealedRoomIds.has((props as RoomMenuProps).roomId)) as BooleanPredicate
+          }
+        >
+          Hide room
+        </Item>
       </Menu>
     </div>
   );

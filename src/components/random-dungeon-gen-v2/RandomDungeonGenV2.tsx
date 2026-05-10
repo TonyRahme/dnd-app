@@ -1,12 +1,48 @@
-import React, { ReactElement, useState } from 'react';
+import React, { ReactElement, useCallback, useRef, useState } from 'react';
 import DungeonCanvas from './DungeonCanvas';
 import { useDungeonGenerator } from './hooks/useDungeonGenerator';
 
+const PLAYER_WINDOW_NAME = 'dungeon-player-view';
+const PLAYER_WINDOW_FEATURES = 'width=1024,height=800,resizable=yes,scrollbars=no';
+
 const RandomDungeonGenV2 = (): ReactElement => {
-  const { startRoom, dungeonMap, exitMap, colors, dragOffsets, generate, reset, setDragOffset } =
-    useDungeonGenerator();
+  const {
+    startRoom,
+    dungeonMap,
+    exitMap,
+    colors,
+    dragOffsets,
+    revealedRoomIds,
+    crawlMode,
+    generate,
+    reset,
+    setDragOffset,
+    toggleRoomReveal,
+    setCrawlMode,
+  } = useDungeonGenerator();
   const [showConnectors, setShowConnectors] = useState<boolean>(false);
   const [showTooltip, setShowTooltip] = useState<boolean>(true);
+  const playerWindowRef = useRef<Window | null>(null);
+
+  const handleEnterCrawl = useCallback(() => {
+    const url = `${window.location.pathname}?view=player`;
+    const popup = window.open(url, PLAYER_WINDOW_NAME, PLAYER_WINDOW_FEATURES);
+    if (!popup) {
+      // eslint-disable-next-line no-alert
+      alert('Could not open Player Screen. Please allow pop-ups for this site.');
+      return;
+    }
+    playerWindowRef.current = popup;
+    setCrawlMode(true);
+  }, [setCrawlMode]);
+
+  const handleExitCrawl = useCallback(() => {
+    if (playerWindowRef.current && !playerWindowRef.current.closed) {
+      playerWindowRef.current.close();
+    }
+    playerWindowRef.current = null;
+    setCrawlMode(false);
+  }, [setCrawlMode]);
 
   return (
     <div className="random-dungeon-gen-v2">
@@ -19,6 +55,15 @@ const RandomDungeonGenV2 = (): ReactElement => {
         <button type="button" className="btn btn-secondary" onClick={reset}>
           Reset Dungeon
         </button>
+        {crawlMode ? (
+          <button type="button" className="btn btn-danger" onClick={handleExitCrawl}>
+            Exit Dungeon Crawl
+          </button>
+        ) : (
+          <button type="button" className="btn btn-success" onClick={handleEnterCrawl}>
+            Player&apos;s Screen
+          </button>
+        )}
 
         <label className="form-check form-switch m-0">
           <input
@@ -44,6 +89,7 @@ const RandomDungeonGenV2 = (): ReactElement => {
 
         <span style={{ marginLeft: 'auto', opacity: 0.7, fontSize: '0.85rem' }}>
           Rooms: {dungeonMap.size} · Exits: {exitMap.size}
+          {crawlMode && ` · Revealed: ${revealedRoomIds.size}`}
         </span>
       </div>
 
@@ -54,6 +100,9 @@ const RandomDungeonGenV2 = (): ReactElement => {
         colors={colors}
         dragOffsets={dragOffsets}
         onDragOffset={setDragOffset}
+        revealedRoomIds={revealedRoomIds}
+        crawlMode={crawlMode}
+        onToggleReveal={toggleRoomReveal}
         showConnectors={showConnectors}
         showTooltip={showTooltip}
       />
