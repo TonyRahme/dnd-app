@@ -20,11 +20,12 @@ import {
 } from '../dungeon.config';
 import { UtilitiesService } from './utilities.service';
 import { EntityGeneratorService } from './entity-generator.service';
+import { CollisionIndex, buildShapeForRoom } from '../collision';
 
 export class DungeonGeneratorService {
   private dungeonMap: Map<string, RoomEntity> = new Map();
   private exitMap: Map<string, ExitEntity> = new Map();
-  private collisionMap: boolean[][] = [[]];
+  private collisionIndex = new CollisionIndex();
 
   private readonly MAX_DUNGEON_SIZE = 10;
   private exitQueue: string[] = [];
@@ -52,7 +53,7 @@ export class DungeonGeneratorService {
   private reset() {
     this.dungeonMap = new Map();
     this.exitMap = new Map();
-    this.collisionMap = [[]];
+    this.collisionIndex.clear();
     this.exitCount = 0;
     this.exitQueue = [];
   }
@@ -78,10 +79,9 @@ export class DungeonGeneratorService {
   public generateStartingArea = (startingAreaCode: string): RoomEntity => {
     const entityModel = this.getStartingAreaEntityModelReq(startingAreaCode);
 
-    let [length, width] = [entityModel.dimension.x, entityModel.dimension.y];
-    const startTansform = EntityGeneratorService.genTransform(length, width, 0, 0, 0, CardinalDirectionName.East);
-
-    UtilitiesService.isValidCollisionPlacement(this.collisionMap, startTansform);
+    // (startTransform was previously computed only to seed the legacy
+    // collision grid. The starting room is added to the collision index
+    // below, once its actual transform is known.)
 
     let start: Partial<RoomEntity>;
     let newId: string = this.generateDungeonId(entityModel.entityCode);
@@ -100,6 +100,7 @@ export class DungeonGeneratorService {
     if (start.description !== ErrorType.ERROR) {
       const newRoom: RoomEntity = start as RoomEntity;
       this.addDungeonArea(newRoom);
+      this.collisionIndex.add(newRoom.id, buildShapeForRoom(newRoom));
       const newExitDTOs = this.generateStartingExitDTOs(newRoom.id, entityModel.exits);
       this.buildStartingExitEntities(newRoom.id, newExitDTOs, (newRoom as Chamber).shape);
       const newExitIds = newExitDTOs.map(exit => exit.exitId || "");
@@ -187,15 +188,45 @@ export class DungeonGeneratorService {
     if (!room || !exitEntity) {
       return newChamber;
     }
-    let roomPosition = UtilitiesService.fixRoomPositionToExitDirection(chamberTransform, exitEntity.transform);
-    let dimension = new Vector3(chamberTransform.dimension.x, chamberTransform.dimension.y);
-    let newChamberTransform = EntityGeneratorService.genTransform(dimension, roomPosition, exitEntity.transform.direction);
 
-    const validCollision = UtilitiesService.isValidCollisionPlacement(this.collisionMap, newChamberTransform);
-    if (!validCollision) {
+    // If the entrance comes off a circle chamber, the door may sit at an
+    // arbitrary angle on the circumference. Place the new room along that
+    // radial outward direction, rotated to face it, instead of snapping
+    // to a cardinal.
+    const sourceShape = (room as Chamber).shape;
+    let newChamberTransform: Transform;
+    if (sourceShape === RoomShapeType.Circle) {
+      const dx = exitEntity.transform.center.x - room.transform.center.x;
+      const dy = exitEntity.transform.center.y - room.transform.center.y;
+      const angle = Math.atan2(dy, dx);
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      // Half the room's depth along its forward (local +x) axis. Depth = dim.x.
+      const halfDepth = chamberTransform.dimension.x / 2;
+      const centerX = exitEntity.transform.center.x + cos * halfDepth;
+      const centerY = exitEntity.transform.center.y + sin * halfDepth;
+      newChamberTransform = {
+        center: { x: centerX, y: centerY } as Vector2,
+        dimension: new Vector3(chamberTransform.dimension.x, chamberTransform.dimension.y, 10),
+        position: new Vector3(centerX - chamberTransform.dimension.x / 2, centerY - chamberTransform.dimension.y / 2),
+        direction: exitEntity.transform.direction,
+        rotation: angle,
+      };
+    } else {
+      const roomPosition = UtilitiesService.fixRoomPositionToExitDirection(chamberTransform, exitEntity.transform);
+      const dimension = new Vector3(chamberTransform.dimension.x, chamberTransform.dimension.y);
+      newChamberTransform = EntityGeneratorService.genTransform(dimension, roomPosition, exitEntity.transform.direction);
+    }
+
+    // Build the candidate shape from the just-computed transform + chamber's
+    // RoomShapeType, ask the index, and only commit if the placement is clear.
+    newChamber.transform = newChamberTransform;
+    const candidateShape = buildShapeForRoom(newChamber);
+    if (!this.collisionIndex.canPlace(candidateShape)) {
       newChamber.description = ErrorType.INVALID_COLLISION;
       return newChamber;
     }
+    this.collisionIndex.add(newId, candidateShape);
 
     let exitCount: number = newChamber.isLarge
       ? Number(weightedRandom(randomLargeExitOptions))
@@ -205,7 +236,6 @@ export class DungeonGeneratorService {
       exitCount = 0;
     }
     let newExitIds = [entranceExitId, ...this.buildRandomExits(newId, newChamberTransform, exitCount, newChamber.shape)];
-    newChamber.transform = newChamberTransform;
     newChamber.setExits(newExitIds);
     return newChamber;
   };

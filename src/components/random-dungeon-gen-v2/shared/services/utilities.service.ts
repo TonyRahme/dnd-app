@@ -1,4 +1,4 @@
-import { head, tail, get, set } from 'lodash-es';
+import { head, tail } from 'lodash-es';
 import { CardinalDirectionName, CardinalDirectionVector2, RotateDirection, Transform, Vector2, Vector3 } from "../model/Transform";
 import { RoomShapeType } from "../model/dungeon-type.model";
 
@@ -138,15 +138,31 @@ export class UtilitiesService {
       const halfX = isCircle ? roomTransform.dimension.x/2 : roomTransform.dimension.x/2;
       const halfY = isCircle ? roomTransform.dimension.x/2 : roomTransform.dimension.y/2;
 
+      // If the room is rotated (e.g. placed off a circle's circumference at a
+      // non-cardinal angle), build exits in the room's local axis-aligned frame
+      // first, then rotate around the center to world coords.
+      const rotation = roomTransform.rotation ?? 0;
+      const rotCos = Math.cos(rotation);
+      const rotSin = Math.sin(rotation);
+      const rotateAroundCenter = (x: number, y: number): Vector2 => {
+        const lx = x - roomTransform.center.x;
+        const ly = y - roomTransform.center.y;
+        return {
+          x: roomTransform.center.x + lx * rotCos - ly * rotSin,
+          y: roomTransform.center.y + lx * rotSin + ly * rotCos,
+        } as Vector2;
+      };
+
       for(let i = 0;i<exitCount;i++){
           deltaRadian += radianDelta;
           deltaRadian += Math.random()*Math.PI/4
           const cx = Math.cos(deltaRadian) * halfX + roomTransform.center.x;
           const cy = Math.sin(deltaRadian) * halfY + roomTransform.center.y;
-          exitPositions.push({
+          const local: Vector2 = {
               x: isCircle ? cx : roundToFive(Number(Math.cos(deltaRadian).toFixed(2))*halfX + roomTransform.center.x),
               y: isCircle ? cy : roundToFive(Number(Math.sin(deltaRadian).toFixed(2))*halfY + roomTransform.center.y),
-          });
+          } as Vector2;
+          exitPositions.push(rotation === 0 ? local : rotateAroundCenter(local.x, local.y));
       }
       return exitPositions;
   }
@@ -221,71 +237,6 @@ export class UtilitiesService {
       const cardinalName = this.getCardinalDirectionNameByVector(cardinal2D);
 
       return cardinalName;
-  }
-
-  static isValidCollisionPlacement(collisionMap: boolean[][], transform: Transform): boolean {
-    const gridX = Math.floor(transform.position.x/5);
-    const gridY = Math.floor(transform.position.y/5);
-
-    let colStartX, colEndX, colStartY, colEndY = 0;
-    let isValidEmptyPlacement = true;
-    colStartX = gridX;
-    colEndX = gridX + transform.dimension.x/5;
-    colStartY = gridY;
-    colEndY = gridY + transform.dimension.y/5;
-
-    isValidEmptyPlacement = this.isCollisionParameterValid(colStartX, colEndX, colStartY, colEndY, collisionMap);
-
-    if(!isValidEmptyPlacement) return false;
-
-    for(let y = colStartY; y<colEndY; y++) {
-        const collYList = get(collisionMap, [y], [false]);
-        for(let x = colStartX; x<colEndX; x++) {
-            const isPositionMarked = get(collYList, [x], false);
-            if(!isPositionMarked) set(collYList, [x], true);
-            else {
-                isValidEmptyPlacement = false;
-                for(let failY = colStartY; failY<y; failY++) {
-                    const resetXList = get(collisionMap, [failY], [false]);
-                    for(let failX = colStartX; failX<colEndX; failX++) {
-                        set(resetXList, [failX], false);
-                    }
-                    set(collisionMap, failY, resetXList);
-                }
-                const resetXLastList = get(collisionMap, [y], [false]);
-                for(let failX = colStartX; failX<x; failX++) {
-                    set(resetXLastList, [failX], false);
-                }
-                set(collisionMap, y, resetXLastList);
-                break;
-            }
-        }
-        if(!isValidEmptyPlacement) break;
-        else {
-            set(collisionMap, y, collYList);
-        }
-    }
-
-    return isValidEmptyPlacement;
-  }
-
-  private static isCollisionParameterValid(colStartX: number, colEndX: number, colStartY: number, colEndY: number, collisionMap: boolean[][]): boolean {
-    const arrayNumber = [];
-    for(let i  = colStartY; i < colEndY; i++) {
-        arrayNumber.push(i);
-    }
-    const collStartRow = get(collisionMap, [colStartY], [false]).slice(colStartX, colEndX);
-    const collEndRow = get(collisionMap, [colEndY-1], [false]).slice(colStartX, colEndX);
-    const collStartCol = [collStartRow[0]];
-    const collEndCol = [collEndRow[0]];
-    arrayNumber.forEach((e) => {
-       const row = get(collisionMap, [e], [false]).slice(colStartX, colEndX);
-       collStartCol.push(row[colStartX]);
-       collEndCol.push(row[colEndX-1]);
-    });
-    collStartCol.push(collStartRow[colStartY]);
-    collEndCol.push(collStartRow[colEndY-1]);
-    return ![collStartRow, collStartCol, collEndRow, collEndCol].flat().some(e => e);
   }
 
 }

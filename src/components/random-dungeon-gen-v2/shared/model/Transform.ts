@@ -4,6 +4,12 @@ export interface Transform {
     dimension: Vector3;
     position: Vector3;
     direction: CardinalDirectionName;
+    /**
+     * Rotation in radians, CCW around the center. 0 = axis-aligned (default).
+     * Used for rooms placed at non-cardinal angles, e.g. children of circle
+     * chambers whose exits lie on arbitrary points along the circumference.
+     */
+    rotation?: number;
 }
 
 export enum RotateDirection {

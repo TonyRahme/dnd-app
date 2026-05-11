@@ -1,13 +1,35 @@
 import { ReactElement } from 'react';
-import { Group, Circle, Rect, Text } from 'react-konva';
+import { Group, Circle, Rect, Line, Text } from 'react-konva';
 import Konva from 'konva';
 import { ExitEntity, RoomEntity, Door, Chamber } from '../shared/model/dungeon-entity.model';
 import { ExitType, RoomShapeType } from '../shared/model/dungeon-type.model';
+import { octagonVertices, trapezoidVertices, directionToNarrow } from '../shared/collision';
 import { SCALE } from './constants';
 import RoomGrid from './RoomGrid';
 
-const isCircleRoom = (room: RoomEntity): boolean =>
-  (room as Chamber).shape === RoomShapeType.Circle;
+const chamberShape = (room: RoomEntity): RoomShapeType | undefined =>
+  (room as Chamber).shape;
+
+const isPolygonRoom = (room: RoomEntity): boolean => {
+  const s = chamberShape(room);
+  return s === RoomShapeType.Octagon || s === RoomShapeType.Trapezoid;
+};
+
+const polygonPointsFor = (room: RoomEntity): number[] => {
+  const t = room.transform;
+  const cx = t.center.x;
+  const cy = t.center.y;
+  const hx = t.dimension.x / 2;
+  const hy = t.dimension.y / 2;
+  const verts =
+    chamberShape(room) === RoomShapeType.Octagon
+      ? octagonVertices(cx, cy, hx, hy)
+      : trapezoidVertices(cx, cy, hx, hy, directionToNarrow(t.direction));
+  // Flatten into Konva's [x0,y0,x1,y1,...] in pixel coords.
+  const flat: number[] = [];
+  for (const v of verts) flat.push(v.x * SCALE, v.y * SCALE);
+  return flat;
+};
 
 const exitFill = (exit: ExitEntity): string => {
   if (exit.exitType !== ExitType.Door) return 'green';
@@ -74,22 +96,47 @@ const RoomNode = ({
       onClick={() => onClick(room.id)}
       onTap={() => onClick(room.id)}
     >
-      {isCircleRoom(room) ? (
-        <Circle
-          {...sharedShapeProps}
-          x={room.transform.center.x * SCALE}
-          y={room.transform.center.y * SCALE}
-          radius={(room.transform.dimension.x / 2) * SCALE}
-        />
-      ) : (
-        <Rect
-          {...sharedShapeProps}
-          x={room.transform.position.x * SCALE}
-          y={room.transform.position.y * SCALE}
-          width={room.transform.dimension.x * SCALE}
-          height={room.transform.dimension.y * SCALE}
-        />
-      )}
+      {(() => {
+        const shape = chamberShape(room);
+        if (shape === RoomShapeType.Circle) {
+          return (
+            <Circle
+              {...sharedShapeProps}
+              x={room.transform.center.x * SCALE}
+              y={room.transform.center.y * SCALE}
+              radius={(room.transform.dimension.x / 2) * SCALE}
+            />
+          );
+        }
+        if (isPolygonRoom(room)) {
+          return (
+            <Line
+              {...sharedShapeProps}
+              points={polygonPointsFor(room)}
+              closed
+            />
+          );
+        }
+        // Rect rooms: render via center + offset + rotation so the
+        // rotation === 0 case is identical to the previous top-left
+        // form, and rotated rooms (from circle exits) render correctly
+        // around their center.
+        const rectW = room.transform.dimension.x * SCALE;
+        const rectH = room.transform.dimension.y * SCALE;
+        const rotDeg = ((room.transform.rotation ?? 0) * 180) / Math.PI;
+        return (
+          <Rect
+            {...sharedShapeProps}
+            x={room.transform.center.x * SCALE}
+            y={room.transform.center.y * SCALE}
+            offsetX={rectW / 2}
+            offsetY={rectH / 2}
+            width={rectW}
+            height={rectH}
+            rotation={rotDeg}
+          />
+        );
+      })()}
       <RoomGrid room={room} />
       {room.exitsIds.map((exitId) => {
         const exit = exitMap.get(exitId);
